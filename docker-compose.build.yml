@@ -8,6 +8,9 @@ services:
      - .:/usr/src/app/
     depends_on:
        - db
+    environment:
+      - "GDRIVE_API_CLIENT_ID=961309221806-3lbfafbq6pommtpru507452kr6emvn7k.apps.googleusercontent.com"
+      - "GDRIVE_API_CLIENT_SECRET=PKGtbWLFbo-C51PrzVOaYTTB"
 
   db:
     image: mysql

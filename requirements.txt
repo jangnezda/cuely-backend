@@ -2,3 +2,5 @@ algoliasearch-django==1.2.4
 Django==1.10
 
 mysqlclient
+requests-oauthlib
+python-social-auth
