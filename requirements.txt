@@ -6,3 +6,7 @@ requests-oauthlib
 python-social-auth
 
 django-bootstrap3
+
+celery[redis]
+
+google-api-python-client

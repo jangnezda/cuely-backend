@@ -5,3 +5,6 @@ services:
     image: cuely-backend
     ports:
      - "8000:8000"
+
+  worker:
+    build: .
