@@ -1,0 +1,22 @@
+{% load bootstrap3 %}
+
+{# Load CSS and JavaScript #}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+{% load static %}
+<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" type="text/css">
+<link rel="stylesheet" type="text/css" href="{% static 'frontend/style.css' %}" />
+
+
+{# Display django.contrib.messages as Bootstrap alerts #}
+{% bootstrap_messages %}
+
+<div class="page-header">
+  <h1>Cuely <small>prototype</small></h1>
+</div>
+
+{% if request.user.is_authenticated %}
+Hello, {{request.user}}!
+{% else %}
+Please log in!
+{% endif %}
