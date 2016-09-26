@@ -2,7 +2,6 @@ version: '2'
 services:
   backend:
     build: .
+    image: cuely-backend
     ports:
      - "8000:8000"
-    volumes:
-     - .:/usr/src/app/
