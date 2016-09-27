@@ -16,7 +16,13 @@
 </div>
 
 {% if request.user.is_authenticated %}
-Hello, {{request.user}}!
+<h2>Hello, {{request.user}}!</h2>
+<p>Documents ({{ documents|length }}):</p>
+<ul>
+  {% for document in documents  %}
+    <li>Doc #{{document.document_id}} [{{ document.download_status }}]</li>
+  {% endfor %}
+</ul>
 {% else %}
 Please log in!
 {% endif %}
