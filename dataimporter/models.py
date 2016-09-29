@@ -22,6 +22,12 @@ class Document(models.Model):
     download_status = models.IntegerField(choices=DOWNLOAD_STATUS, default=PENDING)
     requester = models.ForeignKey(User)
     webViewLink = models.CharField(max_length=500, blank=True, null=True)
+    iconLink = models.CharField(max_length=500, blank=True, null=True)
+    owner_displayName = models.CharField(max_length=200, blank=True, null=True)
+    owner_photoLink = models.CharField(max_length=500, blank=True, null=True)
+    lastModifyingUser_displayName = models.CharField(max_length=200, blank=True, null=True)
+    lastModifyingUser_photoLink = models.CharField(max_length=500, blank=True, null=True)
+    mimeType = models.CharField(max_length=200, blank=True, null=True)
 
     def __str__(self):
         if self.title:
