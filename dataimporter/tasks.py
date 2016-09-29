@@ -33,7 +33,7 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
     while True:
       param = {
         'q': 'mimeType = "application/vnd.google-apps.document"',
-        'fields': 'files/name, files/id, files/mimeType, files/modifiedTime, files/webViewLink'
+        'fields': 'files/name, files/id, files/mimeType, files/modifiedTime, files/webViewLink, files/iconLink, files/lastModifyingUser(displayName,photoLink), files/owners(displayName,photoLink)'
       }
       if page_token:
           param['pageToken'] = page_token
@@ -41,7 +41,15 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
       for item in files['files']:
           doc, created = Document.objects.get_or_create(document_id=item['id'], requester=requester)
           doc.title = item['name']
+          doc.mimeType = item['mimeType']
           doc.webViewLink = item['webViewLink']
+          doc.iconLink = item['iconLink']
+          doc.lastModifyingUser_displayName = item['lastModifyingUser']['displayName']
+          if 'photoLink' in item['lastModifyingUser']:
+              doc.lastModifyingUser_photoLink = item['lastModifyingUser']['photoLink']
+          doc.owner_displayName = item['owners'][0]['displayName']
+          if 'photoLink' in item['owners'][0]:
+              doc.owner_photoLink = item['owners'][0]['photoLink']
           if not created:
               last_modified_on_server = datetime.strptime(item['modifiedTime'], '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=timezone.utc)
               if doc.download_status is Document.READY and (doc.last_synced is None or last_modified_on_server > doc.last_synced):
@@ -56,7 +64,6 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
 
 @shared_task
 def download_gdrive_document(credentials, doc):
-    print("Downloading document #" + doc.document_id)
     doc.download_status = Document.PROCESSING
     doc.save()
 

@@ -4,48 +4,26 @@ services:
     extends:
       file: docker-compose.yml
       service: backend
-    volumes:
-     - .:/usr/src/app/
-    depends_on:
-       - db
-       - redis
     environment:
       - GDRIVE_API_CLIENT_ID=961309221806-3lbfafbq6pommtpru507452kr6emvn7k.apps.googleusercontent.com
       - GDRIVE_API_CLIENT_SECRET=PKGtbWLFbo-C51PrzVOaYTTB
       - ALGOLIA_APPLICATION_ID=OPDWYH4IR4
       - ALGOLIA_API_KEY=9fadc83917a0c84942b1432bb98317fa
-      - MYSQL_ENDPOINT=db
-      - REDIS_ENDPOINT=redis
-
-  db:
-    image: mysql
-    environment:
-      - "MYSQL_DATABASE=cuely"
-      - "MYSQL_USER=cuely-backend"
-      - "MYSQL_PASSWORD=cuely-backend-password"
-      - "MYSQL_RANDOM_ROOT_PASSWORD=yes"
-    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-
-  redis:
-    image: redis
+      - MYSQL_ENDPOINT=cuely.cgnfgjir0owe.eu-west-1.rds.amazonaws.com
+      - REDIS_ENDPOINT=cuely-celery.h4s6xj.0001.euw1.cache.amazonaws.com
 
   worker:
     extends:
       file: docker-compose.yml
       service: worker
-    volumes:
-     - .:/usr/src/app/
-    depends_on:
-      - db
-      - redis
     environment:
       - GDRIVE_API_CLIENT_ID=961309221806-3lbfafbq6pommtpru507452kr6emvn7k.apps.googleusercontent.com
       - GDRIVE_API_CLIENT_SECRET=PKGtbWLFbo-C51PrzVOaYTTB
       - ALGOLIA_APPLICATION_ID=OPDWYH4IR4
       - ALGOLIA_API_KEY=9fadc83917a0c84942b1432bb98317fa
       - C_FORCE_ROOT=1
-      - CELERY_BROKER_REDIS_URL=redis
-      - CELERY_RESULTS_REDIS_URL=redis
-      - MYSQL_ENDPOINT=db
-      - REDIS_ENDPOINT=redis
+      - CELERY_BROKER_REDIS_URL=cuely-celery.h4s6xj.0001.euw1.cache.amazonaws.com
+      - CELERY_RESULTS_REDIS_URL=cuely-celery.h4s6xj.0001.euw1.cache.amazonaws.com
+      - MYSQL_ENDPOINT=cuely.cgnfgjir0owe.eu-west-1.rds.amazonaws.com
+      - REDIS_ENDPOINT=cuely-celery.h4s6xj.0001.euw1.cache.amazonaws.com
     command: /usr/src/app/start_worker.sh

@@ -85,6 +85,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {
             'read_default_file': '/etc/cuely/my.cnf',
+            'HOST': os.environ['MYSQL_ENDPOINT'],
         },
     }
 }
@@ -147,9 +148,9 @@ STATIC_URL = '/static/'
 
 CELERY_IMPORTS = ('dataimporter.tasks',)
 
-CELERY_BROKER_URL = 'redis://redis:6379/0'
-BROKER_URL = 'redis://redis:6379/0'
-CELERY_RESULT_BACKEND = 'redis://redis:6379/1'
+CELERY_BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
+BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
+CELERY_RESULT_BACKEND = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/1'
 
 
 # Algolia setup
