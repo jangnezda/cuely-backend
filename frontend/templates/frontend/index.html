@@ -20,7 +20,7 @@
 <p>Documents ({{ documents|length }}):</p>
 <ul>
   {% for document in documents  %}
-    <li>Doc #{{document.document_id}} [{{ document.download_status }}]</li>
+    <li>Doc #{{document}} [{{ document.download_status }}]</li>
   {% endfor %}
 </ul>
 {% else %}

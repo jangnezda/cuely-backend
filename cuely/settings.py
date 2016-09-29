@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'frontend.apps.FrontendConfig',
     'social.apps.django_app.default',
     'bootstrap3',
+    'django.contrib.algoliasearch',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -149,3 +150,11 @@ CELERY_IMPORTS = ('dataimporter.tasks',)
 CELERY_BROKER_URL = 'redis://redis:6379/0'
 BROKER_URL = 'redis://redis:6379/0'
 CELERY_RESULT_BACKEND = 'redis://redis:6379/1'
+
+
+# Algolia setup
+
+ALGOLIA = {
+    'APPLICATION_ID': os.environ['ALGOLIA_APPLICATION_ID'],
+    'API_KEY': os.environ['ALGOLIA_API_KEY']
+}

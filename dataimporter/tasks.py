@@ -33,7 +33,7 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
     while True:
       param = {
         'q': 'mimeType = "application/vnd.google-apps.document"',
-        'fields': 'files/name, files/id, files/mimeType, files/modifiedTime'
+        'fields': 'files/name, files/id, files/mimeType, files/modifiedTime, files/webViewLink'
       }
       if page_token:
           param['pageToken'] = page_token
@@ -41,15 +41,14 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
       for item in files['files']:
           doc, created = Document.objects.get_or_create(document_id=item['id'], requester=requester)
           doc.title = item['name']
-          subtask(download_gdrive_document).delay(credentials, doc)
+          doc.webViewLink = item['webViewLink']
           if not created:
               last_modified_on_server = datetime.strptime(item['modifiedTime'], '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=timezone.utc)
               if doc.download_status is Document.READY and (doc.last_synced is None or last_modified_on_server > doc.last_synced):
                   doc.resync()
-                #   subtask(download_gdrive_document).delay(credentials, doc)
+                  subtask(download_gdrive_document).delay(credentials, doc)
           else:
-            #   subtask(download_gdrive_document).delay(credentials, doc)
-            pass
+              subtask(download_gdrive_document).delay(credentials, doc)
           doc.save()
       page_token = files.get('nextPageToken')
       if not page_token:

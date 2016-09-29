@@ -21,6 +21,7 @@ class Document(models.Model):
     content = models.TextField(blank=True, null=True)
     download_status = models.IntegerField(choices=DOWNLOAD_STATUS, default=PENDING)
     requester = models.ForeignKey(User)
+    webViewLink = models.CharField(max_length=500, blank=True, null=True)
 
     def __str__(self):
         if self.title:
@@ -30,6 +31,4 @@ class Document(models.Model):
 
     def resync(self):
         content = None;
-        size = 0;
         download_status = Document.PENDING
-        print("RESYNC")
