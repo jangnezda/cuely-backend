@@ -1,28 +1,70 @@
-{% load bootstrap3 %}
 
-{# Load CSS and JavaScript #}
-{% bootstrap_css %}
-{% bootstrap_javascript %}
-{% load static %}
-<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" type="text/css">
-<link rel="stylesheet" type="text/css" href="{% static 'frontend/style.css' %}" />
+{% extends "base.html" %}
+{% load i18n %}
 
-
-{# Display django.contrib.messages as Bootstrap alerts #}
-{% bootstrap_messages %}
-
-<div class="page-header">
-  <h1>Cuely <small>prototype</small></h1>
-</div>
-
+{% block content %}
+<script type="text/javascript">
+$(document).ready(function() {
+  window.setInterval(function(){
+    $.get( "/home/sync_status/", function( status ) {
+      if (status["in_progress"] == false) {
+        $('#sync_in_progress').hide(300);
+      } else {
+        percentage = status["ready"] / status["documents"] * 100
+        $('.progress-bar').width(percentage + "%")
+        $('#sync_in_progress').show(300);
+      }
+    });
+  }, 1000);
+});
+</script>
 {% if request.user.is_authenticated %}
 <h2>Hello, {{request.user}}!</h2>
-<p>Documents ({{ documents|length }}):</p>
-<ul>
-  {% for document in documents  %}
-    <li>Doc #{{document}} [{{ document.download_status }}]</li>
-  {% endfor %}
-</ul>
+<hr />
+<div class="panel panel-default" style="width: 500px">
+  <div class="panel-heading">Manage integrations</div>
+  <div class="panel-body">
+
+
+    {% if "google-oauth2" not in backends %}
+    <a class="btn btn-block btn-social btn-google" href="/login/google-oauth2/">
+      <span class="fa fa-google"></span> Add Google Drive integration
+    </a>
+    {% else %}
+    <a class="btn disabled btn-block btn-social btn-google" href="/login/google-oauth2/">
+      <span class="fa fa-google"></span> Google Drive integration is ready
+    </a>
+    {% endif %}
+
+    <a class="btn disabled btn-block btn-social btn-dropbox">
+      <span class="fa fa-dropbox"></span> Dropbox integration is not yet implemented
+    </a>
+
+    <a class="btn disabled btn-block btn-social btn-github">
+      <span class="fa fa-github"></span> Github integration is not yet implemented
+    </a>
+
+    <a class="btn disabled btn-block btn-social btn-instagram">
+      <span class="fa fa-trello"></span> Trello integration is not yet implemented
+    </a>
+
+    <a class="btn disabled btn-block btn-social btn-linkedin">
+      <span class="fa fa-linkedin"></span> LinkedIn integration is not yet implemented
+    </a>
+
+  </div>
+</div>
+
+<a href="/home/sync/" class="btn btn-success btn-lg" style="width: 500px"><span class="fa fa-refresh" style="padding-right: 10px"></span> Synchronize integrations</a>
+<div id="sync_in_progress" style="display: none;">
+  <p>Loading:</p>
+  <div class="progress">
+    <div class="progress-bar" role="progressbar" style="width: 60%;">
+    </div>
+  </div>
+</div>
 {% else %}
 Please log in!
 {% endif %}
+
+{% endblock %}

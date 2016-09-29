@@ -1,0 +1,13 @@
+body {
+  margin: 30px
+}
+
+div#integrations {
+  width: 500px;
+  margin: auto;
+}
+
+div#integrations h1 {
+  padding-bottom: 20px;
+  font-size: 25px
+}

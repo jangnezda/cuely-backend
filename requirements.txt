@@ -1,5 +1,6 @@
 algoliasearch-django==1.2.4
 Django==1.10
+django-registration==2.1.2
 
 mysqlclient
 requests-oauthlib

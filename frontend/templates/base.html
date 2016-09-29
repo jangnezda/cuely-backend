@@ -1,0 +1,51 @@
+{% load i18n %}
+{% load bootstrap3 %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% bootstrap_css %}
+    <link rel="stylesheet" href="{{ STATIC_URL }}style.css" />
+    <title>{% block title %}Cuely prototype backend{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" type="text/css" href="{% static 'frontend/style.css' %}" />
+    <script src="https://use.fontawesome.com/219d96bcc7.js"></script>
+    <link rel="stylesheet" type="text/css" href="{% static 'frontend/bootstrap-social.css' %}" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    {% bootstrap_javascript %}
+</head>
+
+<body>
+    <div id="header">
+    {% block header %}
+    <div class="page-header">
+      <h1>Cuely <small>prototype</small></h1>
+    </div>
+    <a href="{% url 'index' %}">{% trans "Home" %}</a> |
+
+    {% if user.is_authenticated %}
+        {% trans "Logged in" %}: {{ user.username }}
+        (<a href="{% url 'auth_logout' %}">{% trans "Log out" %}</a> |
+        <a href="{% url 'auth_password_change' %}">{% trans "Change password" %}</a>)
+    {% else %}
+       <a href="{% url 'auth_login' %}">{% trans "Log in" %}</a>
+    {% endif %}
+    <hr />
+    {% endblock %}
+    </div>
+
+    {% bootstrap_messages %}
+
+    <div id="content">
+    {% block content %}{% endblock %}
+    </div>
+
+    <div id="footer">
+    {% block footer %}
+        <hr />
+    {% endblock %}
+    </div>
+</body>
+
+</html>
