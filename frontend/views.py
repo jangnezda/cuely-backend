@@ -36,10 +36,17 @@ def start_synchronization(request):
 
 def sync_status(request):
     user = request.user
-    documents_count = Document.objects.filter(requester=user).count()
-    documents_ready_count = Document.objects.filter(requester=user).filter(download_status = Document.READY).count()
-    return JsonResponse({
-        "documents": documents_count,
-        "ready": documents_ready_count,
-        "in_progress": documents_count - documents_ready_count > 0
-    })
+    if user.is_authenticated:
+        documents_count = Document.objects.filter(requester=user).count()
+        documents_ready_count = Document.objects.filter(requester=user).filter(download_status = Document.READY).count()
+        return JsonResponse({
+            "documents": documents_count,
+            "ready": documents_ready_count,
+            "in_progress": documents_count - documents_ready_count > 0
+        })
+    else:
+        return JsonResponse({
+            "documents": 0,
+            "ready": 0,
+            "in_progress": False
+        })

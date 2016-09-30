@@ -85,8 +85,10 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {
             'read_default_file': '/etc/cuely/my.cnf',
-            'HOST': os.environ['MYSQL_ENDPOINT'],
         },
+        'HOST': os.environ['MYSQL_ENDPOINT'],
+        'USER': os.environ['MYSQL_USER'],
+        'PASSWORD': os.environ['MYSQL_PASSWORD'],
     }
 }
 
