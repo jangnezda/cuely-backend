@@ -43,6 +43,7 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
           doc.title = item['name']
           doc.mimeType = item['mimeType']
           doc.webViewLink = item['webViewLink']
+          doc.last_updated = item['modifiedTime']
           doc.iconLink = item['iconLink']
           doc.lastModifyingUser_displayName = item['lastModifyingUser']['displayName']
           if 'photoLink' in item['lastModifyingUser']:
