@@ -84,3 +84,10 @@ def download_gdrive_document(credentials, doc):
     doc.last_synced = utc_dt.astimezone()
     doc.download_status = Document.READY
     doc.save()
+
+
+def start_synchronization(backend, user, response, *args, **kwargs):
+    social = user.social_auth.get(provider='google-oauth2')
+    access_token = social.extra_data['access_token']
+    refresh_token = social.extra_data['refresh_token']
+    collect_gdrive_docs.delay(user, access_token, refresh_token)
