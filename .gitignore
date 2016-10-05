@@ -1,3 +1,4 @@
 *.pyc
 virtualenv
 db.sqlite3
+*.swp

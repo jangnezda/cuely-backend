@@ -33,7 +33,7 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
     page_token = None
     while True:
       param = {
-        'q': 'mimeType = "application/vnd.google-apps.document"',
+        'q': 'mimeType = "application/vnd.google-apps.document" or mimeType = "application/vnd.google-apps.spreadsheet"',
         'fields': 'files/name, files/id, files/mimeType, files/modifiedTime, files/webViewLink, files/iconLink, files/lastModifyingUser(displayName,photoLink), files/owners(displayName,photoLink)'
       }
       if page_token:
@@ -73,8 +73,8 @@ def download_gdrive_document(credentials, doc):
     http = httplib2.Http()
     http = credentials.authorize(http)
     service = discovery.build('drive', 'v3', http=http)
-    request = service.files().export_media(fileId=doc.document_id,
-                                                 mimeType='text/plain')
+    export_mime = 'text/csv' if 'spreadsheet' in doc.mimeType else 'text/plain'
+    request = service.files().export_media(fileId=doc.document_id, mimeType=export_mime)
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
     done = False
