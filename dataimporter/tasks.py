@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 from datetime import datetime, timezone
+from dateutil.parser import parse as parse_date
 import httplib2
 import io
 import os
@@ -44,6 +45,7 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
           doc.mimeType = item['mimeType']
           doc.webViewLink = item['webViewLink']
           doc.last_updated = item['modifiedTime']
+          doc.last_updated_ts = parse_date(item['modifiedTime']).timestamp()
           doc.iconLink = item['iconLink']
           doc.lastModifyingUser_displayName = item['lastModifyingUser']['displayName']
           if 'photoLink' in item['lastModifyingUser']:
@@ -52,7 +54,7 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
           if 'photoLink' in item['owners'][0]:
               doc.owner_photoLink = item['owners'][0]['photoLink']
           if not created:
-              last_modified_on_server = datetime.strptime(item['modifiedTime'], '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=timezone.utc)
+              last_modified_on_server = doc.last_updated_ts
               if doc.download_status is Document.READY and (doc.last_synced is None or last_modified_on_server > doc.last_synced):
                   doc.resync()
                   subtask(download_gdrive_document).delay(credentials, doc)

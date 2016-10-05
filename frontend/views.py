@@ -1,7 +1,6 @@
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.template import RequestContext
-from pprint import pprint
 
 from dataimporter.models import Document
 from dataimporter.tasks import collect_gdrive_docs

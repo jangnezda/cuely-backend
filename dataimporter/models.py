@@ -18,6 +18,7 @@ class Document(models.Model):
     title = models.CharField(max_length=500, blank=True, null=True)
     last_synced = models.DateTimeField(blank=True, null=True)
     last_updated = models.DateTimeField(auto_now_add=True)
+    last_updated_ts = models.BigIntegerField(null=True)
     content = models.TextField(blank=True, null=True)
     download_status = models.IntegerField(choices=DOWNLOAD_STATUS, default=PENDING)
     requester = models.ForeignKey(User)
