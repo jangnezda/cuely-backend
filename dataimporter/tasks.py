@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import sys, traceback
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_date
 import httplib2
@@ -34,7 +35,7 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
     while True:
       param = {
         'q': 'mimeType = "application/vnd.google-apps.document" or mimeType = "application/vnd.google-apps.spreadsheet"',
-        'fields': 'files/name, files/id, files/mimeType, files/modifiedTime, files/webViewLink, files/iconLink, files/lastModifyingUser(displayName,photoLink), files/owners(displayName,photoLink)'
+        'fields': 'files/name, files/id, files/mimeType, files/modifiedTime, files/webViewLink, files/iconLink, files/lastModifyingUser(displayName,photoLink), files/owners(displayName,photoLink),nextPageToken'
       }
       if page_token:
           param['pageToken'] = page_token
@@ -70,23 +71,25 @@ def download_gdrive_document(credentials, doc):
     doc.download_status = Document.PROCESSING
     doc.save()
 
-    http = httplib2.Http()
-    http = credentials.authorize(http)
-    service = discovery.build('drive', 'v3', http=http)
-    export_mime = 'text/csv' if 'spreadsheet' in doc.mimeType else 'text/plain'
-    request = service.files().export_media(fileId=doc.document_id, mimeType=export_mime)
-    fh = io.BytesIO()
-    downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while done is False:
-        status, done = downloader.next_chunk()
+    try:
+        http = httplib2.Http()
+        http = credentials.authorize(http)
+        service = discovery.build('drive', 'v3', http=http)
+        export_mime = 'text/csv' if 'spreadsheet' in doc.mimeType else 'text/plain'
+        request = service.files().export_media(fileId=doc.document_id, mimeType=export_mime)
+        response = request.execute()
+        print("Done downloading {} [{}]".format(doc.title, doc.document_id))
 
-    content = fh.getvalue().decode('UTF-8')
-    doc.content = content
-    utc_dt = datetime.now(timezone.utc)
-    doc.last_synced = utc_dt.astimezone()
-    doc.download_status = Document.READY
-    doc.save()
+        content = cutUtfString(response.decode('UTF-8'), 9000, step=10)
+        doc.content = content
+        utc_dt = datetime.now(timezone.utc)
+        doc.last_synced = utc_dt.astimezone()
+        doc.download_status = Document.READY
+        doc.save()
+    except Exception as e:
+        traceback.print_exc(file=sys.stdout)
+        print("Deleting file {},{} because it couldn't be exported".format(doc.title, doc.document_id))
+        doc.delete()
 
 
 def start_synchronization(backend, user, response, *args, **kwargs):
@@ -94,3 +97,18 @@ def start_synchronization(backend, user, response, *args, **kwargs):
     access_token = social.extra_data['access_token']
     refresh_token = social.extra_data['refresh_token']
     collect_gdrive_docs.delay(user, access_token, refresh_token)
+
+
+def cutUtfString(s, bytes_len_max, step=1):
+    """
+    Algolia has record limit of 10 kilobytes. Therefore, we need to cut file content to less than that.
+    Unfortunately, there is no easy way to cut a UTF string to exact bytes length (characters may be in
+    different byte sizes, i.e. usually up to 4 bytes).
+    """
+    # worst case, every character is 1 byte, so we first cut the string to max bytes length
+    s = s[:bytes_len_max]
+    l = len(s.encode('UTF-8'))
+    while l > bytes_len_max:
+        s = s[:-step]
+        l = len(s.encode('UTF-8'))
+    return s
