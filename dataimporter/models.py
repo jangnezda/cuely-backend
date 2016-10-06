@@ -24,6 +24,7 @@ class Document(models.Model):
     requester = models.ForeignKey(User)
     webViewLink = models.CharField(max_length=500, blank=True, null=True)
     iconLink = models.CharField(max_length=500, blank=True, null=True)
+    thumbnailLink = models.CharField(max_length=500, blank=True, null=True)
     owner_displayName = models.CharField(max_length=200, blank=True, null=True)
     owner_photoLink = models.CharField(max_length=500, blank=True, null=True)
     lastModifyingUser_displayName = models.CharField(max_length=200, blank=True, null=True)

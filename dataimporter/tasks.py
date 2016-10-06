@@ -1,20 +1,24 @@
 from __future__ import absolute_import
-import sys, traceback
+import sys
+import traceback
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_date
 import httplib2
-import io
 import os
 
 from apiclient import discovery
 from celery import shared_task, subtask
-import oauth2client
 from oauth2client.client import GoogleCredentials
-from oauth2client import client
-from oauth2client import tools
-from apiclient.http import MediaIoBaseDownload
 
 from .models import Document
+
+exportable_mimes = [
+    'application/vnd.google-apps.spreadsheet',
+    'application/vnd.google-apps.document',
+    'application/vnd.google-apps.presentation',
+    'text/'
+]
+
 
 @shared_task
 def collect_gdrive_docs(requester, access_token, refresh_token):
@@ -33,41 +37,47 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
     service = discovery.build('drive', 'v3', http=http)
     page_token = None
     while True:
-      param = {
-        'q': 'mimeType = "application/vnd.google-apps.document" or mimeType = "application/vnd.google-apps.spreadsheet"',
-        'fields': 'files/name, files/id, files/mimeType, files/modifiedTime, files/webViewLink, files/iconLink, files/lastModifyingUser(displayName,photoLink), files/owners(displayName,photoLink),nextPageToken'
-      }
-      if page_token:
-          param['pageToken'] = page_token
-      files = service.files().list(**param).execute()
-      for item in files['files']:
-          doc, created = Document.objects.get_or_create(document_id=item['id'], requester=requester)
-          doc.title = item['name']
-          doc.mimeType = item['mimeType']
-          doc.webViewLink = item['webViewLink']
-          doc.last_updated = item['modifiedTime']
-          doc.last_updated_ts = parse_date(item['modifiedTime']).timestamp()
-          doc.iconLink = item['iconLink']
-          doc.lastModifyingUser_displayName = item['lastModifyingUser']['displayName']
-          if 'photoLink' in item['lastModifyingUser']:
-              doc.lastModifyingUser_photoLink = item['lastModifyingUser']['photoLink']
-          doc.owner_displayName = item['owners'][0]['displayName']
-          if 'photoLink' in item['owners'][0]:
-              doc.owner_photoLink = item['owners'][0]['photoLink']
-          if not created:
-              last_modified_on_server = doc.last_updated_ts
-              if doc.download_status is Document.READY and (doc.last_synced is None or last_modified_on_server > doc.last_synced):
-                  doc.resync()
-                  subtask(download_gdrive_document).delay(credentials, doc)
-          else:
-              subtask(download_gdrive_document).delay(credentials, doc)
-          doc.save()
-      page_token = files.get('nextPageToken')
-      if not page_token:
-          break
+        param = {
+          'q': 'mimeType != "application/vnd.google-apps.folder"',
+          'pageSize': 300,
+          'fields': 'files/name, files/id, files/mimeType, files/modifiedTime, files/webViewLink, files/thumbnailLink, files/iconLink, files/lastModifyingUser(displayName,photoLink), files/owners(displayName,photoLink), nextPageToken'
+        }
+        if page_token:
+            param['pageToken'] = page_token
+        files = service.files().list(**param).execute()
+        for item in files.get('files', []):
+            doc, created = Document.objects.get_or_create(document_id=item['id'], requester=requester)
+            doc.title = item.get('name')
+            doc.mimeType = item.get('mimeType')
+            doc.webViewLink = item.get('webViewLink')
+            doc.iconLink = item.get('iconLink')
+            doc.thumbnailLink = item.get('thumbnailLink')
+            doc.last_updated = item.get('modifiedTime')
+            doc.last_updated_ts = parse_date(doc.last_updated).timestamp()
+            doc.lastModifyingUser_displayName = item.get('lastModifyingUser', {}).get('displayName')
+            doc.lastModifyingUser_photoLink = item.get('lastModifyingUser', {}).get('photoLink')
+            doc.owner_displayName = item['owners'][0]['displayName']
+            doc.owner_photoLink = item.get('owners', [{}])[0].get('photoLink')
+            if not created:
+                last_modified_on_server = doc.last_updated_ts
+                if doc.download_status is Document.READY and (doc.last_synced is None or last_modified_on_server > doc.last_synced):
+                    doc.resync()
+                    subtask(download_gdrive_document).delay(credentials, doc)
+            else:
+                subtask(download_gdrive_document).delay(credentials, doc)
+
+            doc.save()
+        page_token = files.get('nextPageToken')
+        if not page_token:
+            break
 
 @shared_task
 def download_gdrive_document(credentials, doc):
+    if not any(x for x in exportable_mimes if doc.mimeType.startswith(x)):
+        doc.download_status = Document.READY
+        doc.save()
+        return
+
     doc.download_status = Document.PROCESSING
     doc.save()
 
@@ -75,8 +85,13 @@ def download_gdrive_document(credentials, doc):
         http = httplib2.Http()
         http = credentials.authorize(http)
         service = discovery.build('drive', 'v3', http=http)
-        export_mime = 'text/csv' if 'spreadsheet' in doc.mimeType else 'text/plain'
-        request = service.files().export_media(fileId=doc.document_id, mimeType=export_mime)
+        
+        request = None
+        if doc.mimeType.startswith('application/vnd.google-apps.'): 
+            export_mime = 'text/csv' if 'spreadsheet' in doc.mimeType else 'text/plain'
+            request = service.files().export_media(fileId=doc.document_id, mimeType=export_mime)
+        else:
+            request = service.files().get_media(fileId=doc.document_id)
         response = request.execute()
         print("Done downloading {} [{}]".format(doc.title, doc.document_id))
 
