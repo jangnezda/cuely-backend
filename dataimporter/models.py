@@ -41,3 +41,8 @@ class Document(models.Model):
     def resync(self):
         content = None;
         download_status = Document.PENDING
+
+
+class SocialAttributes(models.Model):
+    start_page_token = models.CharField(max_length=100, blank=True, null=True)
+    user = models.ForeignKey(User)
