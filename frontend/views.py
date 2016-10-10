@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate
 from django.http import HttpResponseForbidden
 
 from dataimporter.models import Document
-from dataimporter.tasks import collect_gdrive_docs
+from dataimporter.tasks import collect_gdrive_docs, start_synchronization as docs_sync
 
 def index(request):
     documents = []
@@ -25,11 +25,7 @@ def index(request):
 def start_synchronization(request):
     try:
         if request.user.is_authenticated:
-            social = request.user.social_auth.get(provider='google-oauth2')
-            access_token = social.extra_data['access_token']
-            refresh_token = social.extra_data['refresh_token']
-            print("Collecting docs")
-            collect_gdrive_docs.delay(request.user, access_token, refresh_token)
+            docs_sync(user=request.user) 
     except:
         pass
     return redirect('/home/')

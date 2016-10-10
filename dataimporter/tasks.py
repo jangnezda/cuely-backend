@@ -10,7 +10,8 @@ from apiclient import discovery
 from celery import shared_task, subtask
 from oauth2client.client import GoogleCredentials
 
-from .models import Document
+from django.contrib.auth.models import User
+from .models import Document, SocialAttributes
 
 exportable_mimes = [
     'application/vnd.google-apps.spreadsheet',
@@ -18,34 +19,61 @@ exportable_mimes = [
     'application/vnd.google-apps.presentation',
     'text/'
 ]
+file_fieldset = 'name,id,mimeType,modifiedTime,webViewLink,thumbnailLink,iconLink,trashed,lastModifyingUser(displayName,photoLink),owners(displayName,photoLink)'
 
 
 @shared_task
 def collect_gdrive_docs(requester, access_token, refresh_token):
-    print("Collecting GDRIVE docs")
-    credentials = GoogleCredentials(
-        access_token,
-        os.environ['GDRIVE_API_CLIENT_ID'],
-        os.environ['GDRIVE_API_CLIENT_SECRET'],
-        refresh_token,
-        None,
-        "https://www.googleapis.com/oauth2/v4/token",
-        "cuely/1.0"
-    )
-    http = httplib2.Http()
-    http = credentials.authorize(http)
-    service = discovery.build('drive', 'v3', http=http)
-    page_token = None
-    while True:
-        param = {
+    print("Collecting all GDRIVE docs")
+
+    def _call_gdrive(service):
+        params = {
           'q': 'mimeType != "application/vnd.google-apps.folder"',
           'pageSize': 300,
-          'fields': 'files/name, files/id, files/mimeType, files/modifiedTime, files/webViewLink, files/thumbnailLink, files/iconLink, files/lastModifyingUser(displayName,photoLink), files/owners(displayName,photoLink), nextPageToken'
+          'fields': 'files({}), nextPageToken'.format(file_fieldset)
         }
+        return service.files().list(**params).execute()
+
+    process_gdrive_docs(requester, access_token, refresh_token, files_fn=_call_gdrive, json_key='files')
+
+
+@shared_task
+def sync_gdrive_changes(requester, access_token, refresh_token):
+    print("Collecting changed GDRIVE docs")
+
+    def _call_gdrive(service):
+        page_token = SocialAttributes.objects.filter(user=requester).first().start_page_token
+        params = {
+          'pageSize': 300,
+          'fields': 'changes(file({})),newStartPageToken,nextPageToken'.format(file_fieldset),
+          'pageToken': page_token,
+          'spaces': 'drive',
+          'includeRemoved': True,
+          'restrictToMyDrive': False
+        }
+        return service.changes().list(**params).execute()
+
+    new_start_page_token = process_gdrive_docs(requester, access_token, refresh_token, files_fn=_call_gdrive, json_key='changes')
+    if new_start_page_token:
+        SocialAttributes.objects.update_or_create(user=requester, defaults={'start_page_token': new_start_page_token})
+        
+def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_key):
+    service = connect_to_gdrive(access_token, refresh_token)
+    page_token = None
+    new_start_page_token = None
+    while True:
         if page_token:
             param['pageToken'] = page_token
-        files = service.files().list(**param).execute()
-        for item in files.get('files', []):
+        files = files_fn(service)
+        new_start_page_token = files.get('newStartPageToken', new_start_page_token)
+        for item in files.get(json_key, []):
+            if 'file' in item:
+                item = item['file']
+            if item.get('trashed'):
+                # file was removed
+                Document.objects.filter(document_id=item['id']).delete()
+                continue
+
             doc, created = Document.objects.get_or_create(document_id=item['id'], requester=requester, user_id=requester.id)
             doc.title = item.get('name')
             doc.mimeType = item.get('mimeType')
@@ -62,17 +90,19 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
             if not created:
                 if doc.download_status is Document.READY and (doc.last_synced is None or last_modified_on_server > doc.last_synced):
                     doc.resync()
-                    subtask(download_gdrive_document).delay(credentials, doc)
+                    subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
             else:
-                subtask(download_gdrive_document).delay(credentials, doc)
+                subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
 
             doc.save()
         page_token = files.get('nextPageToken')
         if not page_token:
             break
+    return new_start_page_token
+
 
 @shared_task
-def download_gdrive_document(credentials, doc):
+def download_gdrive_document(doc, access_token, refresh_token):
     if not any(x for x in exportable_mimes if doc.mimeType.startswith(x)):
         doc.download_status = Document.READY
         doc.save()
@@ -82,9 +112,7 @@ def download_gdrive_document(credentials, doc):
     doc.save()
 
     try:
-        http = httplib2.Http()
-        http = credentials.authorize(http)
-        service = discovery.build('drive', 'v3', http=http)
+        service = connect_to_gdrive(access_token, refresh_token)
         
         request = None
         if doc.mimeType.startswith('application/vnd.google-apps.'): 
@@ -107,12 +135,36 @@ def download_gdrive_document(credentials, doc):
         doc.delete()
 
 
-def start_synchronization(backend, user, response, *args, **kwargs):
+def start_synchronization(user):
     social = user.social_auth.get(provider='google-oauth2')
     access_token = social.extra_data['access_token']
     refresh_token = social.extra_data['refresh_token']
+    
+    ### gdrive #######
+    # 1. Set the marker to have a reference point for later calls to gdrive changes api.
+    #    Without setting this starting point, changes api won't return any changes.
+    service = connect_to_gdrive(access_token, refresh_token)
+    response = service.changes().getStartPageToken().execute()
+    SocialAttributes.objects.update_or_create(user=user, defaults={'start_page_token': response.get('startPageToken')})
+
+    # 2. Start the synchronization
     collect_gdrive_docs.delay(user, access_token, refresh_token)
 
+
+def connect_to_gdrive(access_token, refresh_token):
+    credentials = GoogleCredentials(
+        access_token,
+        os.environ['GDRIVE_API_CLIENT_ID'],
+        os.environ['GDRIVE_API_CLIENT_SECRET'],
+        refresh_token,
+        None,
+        "https://www.googleapis.com/oauth2/v4/token",
+        "cuely/1.0"
+    )
+    http = httplib2.Http()
+    http = credentials.authorize(http)
+    service = discovery.build('drive', 'v3', http=http)
+    return service
 
 def cutUtfString(s, bytes_len_max, step=1):
     """
