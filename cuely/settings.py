@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 """
 
 import os
+from datetime import timedelta
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -163,6 +164,12 @@ CELERY_IMPORTS = ('dataimporter.tasks',)
 CELERY_BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 CELERY_RESULT_BACKEND = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/1'
+CELERYBEAT_SCHEDULE = {
+    'sync-every-60-seconds': {
+        'task': 'dataimporter.tasks.update_synchronization',
+        'schedule': timedelta(seconds=60),
+    },
+}
 
 
 # Algolia setup

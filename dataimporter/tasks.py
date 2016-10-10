@@ -1,16 +1,14 @@
-from __future__ import absolute_import
+import os
 import sys
 import traceback
+import httplib2
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_date
-import httplib2
-import os
 
 from apiclient import discovery
 from celery import shared_task, subtask
 from oauth2client.client import GoogleCredentials
 
-from django.contrib.auth.models import User
 from .models import Document, SocialAttributes
 
 exportable_mimes = [
@@ -20,6 +18,33 @@ exportable_mimes = [
     'text/'
 ]
 file_fieldset = 'name,id,mimeType,modifiedTime,webViewLink,thumbnailLink,iconLink,trashed,lastModifyingUser(displayName,photoLink),owners(displayName,photoLink)'
+
+
+def start_synchronization(user):
+    """ Run initial syncing of user's data in external systems. Gdrive-only at the moment. """
+    access_token, refresh_token = get_google_tokens(user)
+
+    ### gdrive ###################
+    # 1. Set the marker to have a reference point for later calls to gdrive changes api.
+    #    Without setting this starting point, changes api won't return any changes.
+    service = connect_to_gdrive(access_token, refresh_token)
+    response = service.changes().getStartPageToken().execute()
+    SocialAttributes.objects.update_or_create(user=user, defaults={'start_page_token': response.get('startPageToken')})
+
+    # 2. Start the synchronization
+    collect_gdrive_docs.delay(user, access_token, refresh_token)
+
+
+@shared_task
+def update_synchronization():
+    """
+    Check for new/updated files in external systems for all users. Should be called periodically after initial syncing.
+    Gdrive-only at the moment.
+    """
+    print("Update synchronizations started")
+    for sa in SocialAttributes.objects.filter(start_page_token__isnull=False):
+        access_token, refresh_token = get_google_tokens(sa.user)
+        subtask(sync_gdrive_changes).delay(sa.user, access_token, refresh_token, sa.start_page_token)
 
 
 @shared_task
@@ -38,15 +63,14 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
 
 
 @shared_task
-def sync_gdrive_changes(requester, access_token, refresh_token):
+def sync_gdrive_changes(requester, access_token, refresh_token, start_page_token):
     print("Collecting changed GDRIVE docs")
 
     def _call_gdrive(service):
-        page_token = SocialAttributes.objects.filter(user=requester).first().start_page_token
         params = {
           'pageSize': 300,
           'fields': 'changes(file({})),newStartPageToken,nextPageToken'.format(file_fieldset),
-          'pageToken': page_token,
+          'pageToken': start_page_token,
           'spaces': 'drive',
           'includeRemoved': True,
           'restrictToMyDrive': False
@@ -57,6 +81,7 @@ def sync_gdrive_changes(requester, access_token, refresh_token):
     if new_start_page_token:
         SocialAttributes.objects.update_or_create(user=requester, defaults={'start_page_token': new_start_page_token})
         
+
 def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_key):
     service = connect_to_gdrive(access_token, refresh_token)
     page_token = None
@@ -135,20 +160,11 @@ def download_gdrive_document(doc, access_token, refresh_token):
         doc.delete()
 
 
-def start_synchronization(user):
+def get_google_tokens(user):
     social = user.social_auth.get(provider='google-oauth2')
     access_token = social.extra_data['access_token']
     refresh_token = social.extra_data['refresh_token']
-    
-    ### gdrive #######
-    # 1. Set the marker to have a reference point for later calls to gdrive changes api.
-    #    Without setting this starting point, changes api won't return any changes.
-    service = connect_to_gdrive(access_token, refresh_token)
-    response = service.changes().getStartPageToken().execute()
-    SocialAttributes.objects.update_or_create(user=user, defaults={'start_page_token': response.get('startPageToken')})
-
-    # 2. Start the synchronization
-    collect_gdrive_docs.delay(user, access_token, refresh_token)
+    return (access_token, refresh_token)
 
 
 def connect_to_gdrive(access_token, refresh_token):
