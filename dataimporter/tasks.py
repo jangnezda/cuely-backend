@@ -46,20 +46,20 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
             param['pageToken'] = page_token
         files = service.files().list(**param).execute()
         for item in files.get('files', []):
-            doc, created = Document.objects.get_or_create(document_id=item['id'], requester=requester)
+            doc, created = Document.objects.get_or_create(document_id=item['id'], requester=requester, user_id=requester.id)
             doc.title = item.get('name')
             doc.mimeType = item.get('mimeType')
             doc.webViewLink = item.get('webViewLink')
             doc.iconLink = item.get('iconLink')
             doc.thumbnailLink = item.get('thumbnailLink')
             doc.last_updated = item.get('modifiedTime')
-            doc.last_updated_ts = parse_date(doc.last_updated).timestamp()
+            last_modified_on_server = parse_date(doc.last_updated)
+            doc.last_updated_ts = last_modified_on_server.timestamp()
             doc.lastModifyingUser_displayName = item.get('lastModifyingUser', {}).get('displayName')
             doc.lastModifyingUser_photoLink = item.get('lastModifyingUser', {}).get('photoLink')
             doc.owner_displayName = item['owners'][0]['displayName']
             doc.owner_photoLink = item.get('owners', [{}])[0].get('photoLink')
             if not created:
-                last_modified_on_server = doc.last_updated_ts
                 if doc.download_status is Document.READY and (doc.last_synced is None or last_modified_on_server > doc.last_synced):
                     doc.resync()
                     subtask(download_gdrive_document).delay(credentials, doc)

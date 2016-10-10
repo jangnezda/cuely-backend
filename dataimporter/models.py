@@ -22,6 +22,7 @@ class Document(models.Model):
     content = models.TextField(blank=True, null=True)
     download_status = models.IntegerField(choices=DOWNLOAD_STATUS, default=PENDING)
     requester = models.ForeignKey(User)
+    user_id = models.IntegerField()
     webViewLink = models.CharField(max_length=500, blank=True, null=True)
     iconLink = models.CharField(max_length=500, blank=True, null=True)
     thumbnailLink = models.CharField(max_length=500, blank=True, null=True)
