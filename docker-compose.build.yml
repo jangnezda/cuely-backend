@@ -10,6 +10,7 @@ services:
        - db
        - redis
     environment:
+      - CUELY_DEBUG=True
       - GDRIVE_API_CLIENT_ID=961309221806-3lbfafbq6pommtpru507452kr6emvn7k.apps.googleusercontent.com
       - GDRIVE_API_CLIENT_SECRET=PKGtbWLFbo-C51PrzVOaYTTB
       - ALGOLIA_APPLICATION_ID=OPDWYH4IR4
@@ -42,6 +43,7 @@ services:
       - db
       - redis
     environment:
+      - CUELY_DEBUG=True
       - GDRIVE_API_CLIENT_ID=961309221806-3lbfafbq6pommtpru507452kr6emvn7k.apps.googleusercontent.com
       - GDRIVE_API_CLIENT_SECRET=PKGtbWLFbo-C51PrzVOaYTTB
       - ALGOLIA_APPLICATION_ID=OPDWYH4IR4
