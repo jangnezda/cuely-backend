@@ -24,5 +24,4 @@ urlpatterns = [
     url(r'^accounts/profile/?$', RedirectView.as_view(url='/home/')),
     url(r'^accounts/', include('registration.backends.simple.urls')),
     url('', include('social.apps.django_app.urls', namespace='social'))
-
 ]

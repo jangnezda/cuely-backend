@@ -1,6 +1,8 @@
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.template import RequestContext
+from django.contrib.auth import authenticate
+from django.http import HttpResponseForbidden
 
 from dataimporter.models import Document
 from dataimporter.tasks import collect_gdrive_docs
@@ -49,3 +51,14 @@ def sync_status(request):
             "ready": 0,
             "in_progress": False
         })
+
+def get_algolia_key(request):
+    if request.user.is_authenticated:
+        return JsonResponse({
+            'userid': request.user.id,
+            'username': request.user.username,
+            'appId': 'OPDWYH4IR4',
+            'searchKey': '0b28a5913167a1618773992171c04344'
+        })
+    else:
+        return HttpResponseForbidden()
