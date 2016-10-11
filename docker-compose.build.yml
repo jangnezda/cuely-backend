@@ -1,14 +1,15 @@
 version: '2'
 services:
   backend:
-    extends:
-      file: docker-compose.yml
-      service: backend
+    build: .
+    image: cuely-backend
+    ports:
+      - "8000:8000"
     volumes:
-     - .:/usr/src/app/
+      - .:/usr/src/app/
     depends_on:
-       - db
-       - redis
+      - db
+      - redis
     environment:
       - CUELY_DEBUG=True
       - GDRIVE_API_CLIENT_ID=961309221806-3lbfafbq6pommtpru507452kr6emvn7k.apps.googleusercontent.com
@@ -34,11 +35,9 @@ services:
     image: redis
 
   worker:
-    extends:
-      file: docker-compose.yml
-      service: worker
+    build: .
     volumes:
-     - .:/usr/src/app/
+      - .:/usr/src/app/
     depends_on:
       - db
       - redis
@@ -57,6 +56,29 @@ services:
       - MYSQL_USER=cuely-backend
       - MYSQL_PASSWORD=cuely-backend-password
     command: /usr/src/app/start_worker.sh
+
+  beat:
+    build: .
+    volumes:
+      - .:/usr/src/app/
+    depends_on:
+      - db
+      - redis
+    environment:
+      - CUELY_DEBUG=True
+      - GDRIVE_API_CLIENT_ID=961309221806-3lbfafbq6pommtpru507452kr6emvn7k.apps.googleusercontent.com
+      - GDRIVE_API_CLIENT_SECRET=PKGtbWLFbo-C51PrzVOaYTTB
+      - ALGOLIA_APPLICATION_ID=OPDWYH4IR4
+      - ALGOLIA_API_KEY=9fadc83917a0c84942b1432bb98317fa
+      - ALGOLIA_INDEX_NAME=cuely_dev_documents
+      - C_FORCE_ROOT=1
+      - CELERY_BROKER_REDIS_URL=redis
+      - CELERY_RESULTS_REDIS_URL=redis
+      - MYSQL_ENDPOINT=db
+      - REDIS_ENDPOINT=redis
+      - MYSQL_USER=cuely-backend
+      - MYSQL_PASSWORD=cuely-backend-password
+    command: /usr/src/app/start_beat.sh
 
   ngrok:
     image: wernight/ngrok
