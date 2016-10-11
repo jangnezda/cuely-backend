@@ -51,12 +51,14 @@ def update_synchronization():
 def collect_gdrive_docs(requester, access_token, refresh_token):
     print("Collecting all GDRIVE docs")
 
-    def _call_gdrive(service):
+    def _call_gdrive(service, page_token):
         params = {
           'q': 'mimeType != "application/vnd.google-apps.folder"',
           'pageSize': 300,
-          'fields': 'files({}), nextPageToken'.format(file_fieldset)
+          'fields': 'files({}),nextPageToken'.format(file_fieldset)
         }
+        if page_token:
+            params['pageToken'] = page_token
         return service.files().list(**params).execute()
 
     process_gdrive_docs(requester, access_token, refresh_token, files_fn=_call_gdrive, json_key='files')
@@ -66,11 +68,11 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
 def sync_gdrive_changes(requester, access_token, refresh_token, start_page_token):
     print("Collecting changed GDRIVE docs")
 
-    def _call_gdrive(service):
+    def _call_gdrive(service, page_token):
         params = {
           'pageSize': 300,
           'fields': 'changes(file({})),newStartPageToken,nextPageToken'.format(file_fieldset),
-          'pageToken': start_page_token,
+          'pageToken': page_token or start_page_token,
           'spaces': 'drive',
           'includeRemoved': True,
           'restrictToMyDrive': False
@@ -87,9 +89,7 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
     page_token = None
     new_start_page_token = None
     while True:
-        if page_token:
-            param['pageToken'] = page_token
-        files = files_fn(service)
+        files = files_fn(service, page_token)
         new_start_page_token = files.get('newStartPageToken', new_start_page_token)
         for item in files.get(json_key, []):
             if 'file' in item:
@@ -120,6 +120,7 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
                 subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
 
             doc.save()
+
         page_token = files.get('nextPageToken')
         if not page_token:
             break

@@ -39,12 +39,12 @@ services:
       - GDRIVE_API_CLIENT_SECRET=PKGtbWLFbo-C51PrzVOaYTTB
       - ALGOLIA_APPLICATION_ID=OPDWYH4IR4
       - ALGOLIA_API_KEY=9fadc83917a0c84942b1432bb98317fa
-      - ALGOLIA_INDEX_NAME=cuely_dev_documents
+      - ALGOLIA_INDEX_NAME=cuely_documents
       - C_FORCE_ROOT=1
-      - CELERY_BROKER_REDIS_URL=redis
-      - CELERY_RESULTS_REDIS_URL=redis
-      - MYSQL_ENDPOINT=db
-      - REDIS_ENDPOINT=redis
-      - MYSQL_USER=cuely-backend
-      - MYSQL_PASSWORD=cuely-backend-password
+      - CELERY_BROKER_REDIS_URL=cuely-celery.h4s6xj.0001.euw1.cache.amazonaws.com
+      - CELERY_RESULTS_REDIS_URL=cuely-celery.h4s6xj.0001.euw1.cache.amazonaws.com
+      - MYSQL_ENDPOINT=cuely-backend.cgnfgjir0owe.eu-west-1.rds.amazonaws.com
+      - REDIS_ENDPOINT=cuely-celery.h4s6xj.0001.euw1.cache.amazonaws.com
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=A1PMCIhlu1AB
     command: /usr/src/app/start_beat.sh
