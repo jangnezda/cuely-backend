@@ -42,11 +42,8 @@ def sync_status(request):
             "in_progress": documents_count - documents_ready_count > 0
         })
     else:
-        return JsonResponse({
-            "documents": 0,
-            "ready": 0,
-            "in_progress": False
-        })
+        return HttpResponseForbidden()
+
 
 def get_algolia_key(request):
     if request.user.is_authenticated:
