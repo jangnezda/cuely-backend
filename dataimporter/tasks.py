@@ -17,6 +17,12 @@ exportable_mimes = [
     'application/vnd.google-apps.presentation',
     'text/'
 ]
+ignored_mimes = [
+    'application/vnd.google-apps.folder',
+    'image/',
+    'video/',
+    'audio/'
+]
 file_fieldset = 'name,id,mimeType,modifiedTime,webViewLink,thumbnailLink,iconLink,trashed,lastModifyingUser(displayName,photoLink),owners(displayName,photoLink)'
 
 
@@ -49,11 +55,14 @@ def update_synchronization():
 
 @shared_task
 def collect_gdrive_docs(requester, access_token, refresh_token):
-    print("Collecting all GDRIVE docs")
+    print("LIST gdrive files")
 
     def _call_gdrive(service, page_token):
+        # want to produce 'q' filter like this:
+        #    "pageSize = 300 and fields = '...' and not (mimeType contains 'image/' or mimeType contains ...)"
+        ignore_mime_types = ' or '.join(["mimeType contains '{}'".format(x) for x in ignored_mimes])
         params = {
-          'q': 'mimeType != "application/vnd.google-apps.folder"',
+          'q': "not ({})".format(ignore_mime_types),
           'pageSize': 300,
           'fields': 'files({}),nextPageToken'.format(file_fieldset)
         }
@@ -66,7 +75,7 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
 
 @shared_task
 def sync_gdrive_changes(requester, access_token, refresh_token, start_page_token):
-    print("Collecting changed GDRIVE docs")
+    print("CHANGES gdrive files")
 
     def _call_gdrive(service, page_token):
         params = {
@@ -94,6 +103,9 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
         for item in files.get(json_key, []):
             if 'file' in item:
                 item = item['file']
+            # check for ignored mime types
+            if any(x in item.get('mimeType') for x in ignored_mimes):
+                continue
             if item.get('trashed'):
                 # file was removed
                 Document.objects.filter(document_id=item['id']).delete()
