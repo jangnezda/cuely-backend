@@ -3,6 +3,7 @@ import sys
 import traceback
 import httplib2
 import json
+import re
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_date
 
@@ -18,12 +19,22 @@ exportable_mimes = [
     'application/vnd.google-apps.presentation',
     'text/'
 ]
-ignored_mimes = [
+# list of ignored mime types for gdrive api calls
+ignored_mimes_api = [
     'application/vnd.google-apps.folder',
     'image/',
-    'video/',
-    'audio/'
+    'audio/',
+    'video/'
 ]
+# list of ignored mime types for filtering the gdrive api file listings
+ignored_mimes = [
+    r'application/vnd.google-apps.folder',
+    r'.*[-+/](zip|tar|gzip|bz2|rar|octet-stream).*',
+    r'image/.*',
+    r'video/.*',
+    r'audio/.*'
+]
+ignored_mimes_regex = [re.compile(x, re.UNICODE | re.IGNORECASE) for x in ignored_mimes]
 file_fieldset = ','.join([
     'name',
     'id',
@@ -73,7 +84,7 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
     def _call_gdrive(service, page_token):
         # want to produce 'q' filter like this:
         #    "pageSize = 300 and fields = '...' and not (mimeType contains 'image/' or mimeType contains ...)"
-        ignore_mime_types = ' or '.join(["mimeType contains '{}'".format(x) for x in ignored_mimes])
+        ignore_mime_types = ' or '.join(["mimeType contains '{}'".format(x) for x in ignored_mimes_api])
         params = {
             'q': "not ({})".format(ignore_mime_types),
             'pageSize': 300,
@@ -129,7 +140,7 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             if 'file' in item:
                 item = item['file']
             # check for ignored mime types
-            if any(x in item.get('mimeType') for x in ignored_mimes):
+            if any(x.match(item.get('mimeType', '')) for x in ignored_mimes_regex):
                 continue
             if item.get('trashed'):
                 # file was removed
