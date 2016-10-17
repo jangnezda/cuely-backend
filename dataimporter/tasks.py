@@ -26,7 +26,7 @@ ignored_mimes_api = [
     'audio/',
     'video/'
 ]
-# list of ignored mime types for filtering the gdrive api file listings
+# list of ignored mime types for filtering the gdrive api results (file listings)
 ignored_mimes = [
     r'application/vnd.google-apps.folder',
     r'.*[-+/](zip|tar|gzip|bz2|rar|octet-stream).*',
