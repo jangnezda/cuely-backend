@@ -2,6 +2,7 @@ import os
 import sys
 import traceback
 import httplib2
+import json
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_date
 
@@ -23,14 +24,26 @@ ignored_mimes = [
     'video/',
     'audio/'
 ]
-file_fieldset = 'name,id,mimeType,modifiedTime,webViewLink,thumbnailLink,iconLink,trashed,lastModifyingUser(displayName,photoLink),owners(displayName,photoLink)'
+file_fieldset = ','.join([
+    'name',
+    'id',
+    'mimeType',
+    'modifiedTime',
+    'webViewLink',
+    'thumbnailLink',
+    'iconLink',
+    'trashed',
+    'lastModifyingUser(displayName,photoLink)',
+    'owners(displayName,photoLink)',
+    'parents'
+])
 
 
 def start_synchronization(user):
     """ Run initial syncing of user's data in external systems. Gdrive-only at the moment. """
     access_token, refresh_token = get_google_tokens(user)
 
-    ### gdrive ###################
+    # ## gdrive ###################
     # 1. Set the marker to have a reference point for later calls to gdrive changes api.
     #    Without setting this starting point, changes api won't return any changes.
     service = connect_to_gdrive(access_token, refresh_token)
@@ -62,9 +75,9 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
         #    "pageSize = 300 and fields = '...' and not (mimeType contains 'image/' or mimeType contains ...)"
         ignore_mime_types = ' or '.join(["mimeType contains '{}'".format(x) for x in ignored_mimes])
         params = {
-          'q': "not ({})".format(ignore_mime_types),
-          'pageSize': 300,
-          'fields': 'files({}),nextPageToken'.format(file_fieldset)
+            'q': "not ({})".format(ignore_mime_types),
+            'pageSize': 300,
+            'fields': 'files({}),nextPageToken'.format(file_fieldset)
         }
         if page_token:
             params['pageToken'] = page_token
@@ -79,28 +92,40 @@ def sync_gdrive_changes(requester, access_token, refresh_token, start_page_token
 
     def _call_gdrive(service, page_token):
         params = {
-          'pageSize': 300,
-          'fields': 'changes(file({})),newStartPageToken,nextPageToken'.format(file_fieldset),
-          'pageToken': page_token or start_page_token,
-          'spaces': 'drive',
-          'includeRemoved': True,
-          'restrictToMyDrive': False
+            'pageSize': 300,
+            'fields': 'changes(file({})),newStartPageToken,nextPageToken'.format(file_fieldset),
+            'pageToken': page_token or start_page_token,
+            'spaces': 'drive',
+            'includeRemoved': True,
+            'restrictToMyDrive': False
         }
         return service.changes().list(**params).execute()
 
-    new_start_page_token = process_gdrive_docs(requester, access_token, refresh_token, files_fn=_call_gdrive, json_key='changes')
+    new_start_page_token = process_gdrive_docs(
+        requester,
+        access_token,
+        refresh_token,
+        files_fn=_call_gdrive,
+        json_key='changes'
+    )
     if new_start_page_token:
         SocialAttributes.objects.update_or_create(user=requester, defaults={'start_page_token': new_start_page_token})
-        
+
 
 def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_key):
     service = connect_to_gdrive(access_token, refresh_token)
+    folders = {}
+
     page_token = None
     new_start_page_token = None
     while True:
         files = files_fn(service, page_token)
         new_start_page_token = files.get('newStartPageToken', new_start_page_token)
-        for item in files.get(json_key, []):
+        items = files.get(json_key, [])
+        if not folders and len(items) > 0:
+            # retreive all folders to be able to get file path more easily in the file listing(s)
+            folders = get_gdrive_folders(service)
+        for item in items:
             if 'file' in item:
                 item = item['file']
             # check for ignored mime types
@@ -111,13 +136,23 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
                 Document.objects.filter(document_id=item['id']).delete()
                 continue
 
-            doc, created = Document.objects.get_or_create(document_id=item['id'], requester=requester, user_id=requester.id)
+            # handle file path within gdrive
+            parents = item.get('parents', [])
+            parent = parents[0] if parents else None
+            path = get_gdrive_path(parent, folders)
+
+            doc, created = Document.objects.get_or_create(
+                document_id=item['id'],
+                requester=requester,
+                user_id=requester.id
+            )
             doc.title = item.get('name')
             doc.mimeType = item.get('mimeType')
             doc.webViewLink = item.get('webViewLink')
             doc.iconLink = item.get('iconLink')
             doc.thumbnailLink = item.get('thumbnailLink')
             doc.last_updated = item.get('modifiedTime')
+            doc.path = json.dumps(path)
             last_modified_on_server = parse_date(doc.last_updated)
             doc.last_updated_ts = last_modified_on_server.timestamp()
             doc.lastModifyingUser_displayName = item.get('lastModifyingUser', {}).get('displayName')
@@ -125,7 +160,8 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             doc.owner_displayName = item['owners'][0]['displayName']
             doc.owner_photoLink = item.get('owners', [{}])[0].get('photoLink')
             if not created:
-                if doc.download_status is Document.READY and (doc.last_synced is None or last_modified_on_server > doc.last_synced):
+                if doc.download_status is Document.READY and \
+                        (doc.last_synced is None or last_modified_on_server > doc.last_synced):
                     doc.resync()
                     subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
             else:
@@ -137,6 +173,45 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
         if not page_token:
             break
     return new_start_page_token
+
+
+def get_gdrive_folders(service):
+    page_token = None
+    lookup = {}
+    while True:
+        params = {
+            'q': "mimeType = 'application/vnd.google-apps.folder'",
+            'pageSize': 100,
+            'fields': 'files(id,name,parents),nextPageToken'
+        }
+        if page_token:
+            params['pageToken'] = page_token
+        files = service.files().list(**params).execute()
+        for item in files.get('files', []):
+            parents = item.get('parents', [])
+            lookup[item.get('id')] = {
+                'id': item.get('id'),
+                'parent': parents[0] if parents else None,
+                'name': item.get('name')
+            }
+        page_token = files.get('nextPageToken')
+        if not page_token:
+            break
+    return lookup
+
+
+def get_gdrive_path(file_id, folders):
+    if not (file_id and folders and file_id in folders):
+        return []
+    path = []
+    while file_id is not None:
+        f = folders.get(file_id)
+        path.append(f.get('name'))
+        file_id = f.get('parent')
+        if file_id not in folders:
+            file_id = None
+    path.reverse()
+    return path
 
 
 @shared_task
@@ -151,9 +226,9 @@ def download_gdrive_document(doc, access_token, refresh_token):
 
     try:
         service = connect_to_gdrive(access_token, refresh_token)
-        
+
         request = None
-        if doc.mimeType.startswith('application/vnd.google-apps.'): 
+        if doc.mimeType.startswith('application/vnd.google-apps.'):
             export_mime = 'text/csv' if 'spreadsheet' in doc.mimeType else 'text/plain'
             request = service.files().export_media(fileId=doc.document_id, mimeType=export_mime)
         else:
@@ -167,7 +242,7 @@ def download_gdrive_document(doc, access_token, refresh_token):
         doc.last_synced = utc_dt.astimezone()
         doc.download_status = Document.READY
         doc.save()
-    except Exception as e:
+    except:
         traceback.print_exc(file=sys.stdout)
         print("Deleting file {},{} because it couldn't be exported".format(doc.title, doc.document_id))
         doc.delete()
@@ -194,6 +269,7 @@ def connect_to_gdrive(access_token, refresh_token):
     http = credentials.authorize(http)
     service = discovery.build('drive', 'v3', http=http)
     return service
+
 
 def cutUtfString(s, bytes_len_max, step=1):
     """

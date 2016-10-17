@@ -10,7 +10,8 @@ class DocumentIndex(AlgoliaIndex):
             'unordered(title)',
             'owner_displayName',
             'lastModifyingUser_displayName',
-            'content'
+            'content',
+            'path'
         ],
         # adjust ranking formula
         'ranking': [
@@ -39,5 +40,6 @@ class DocumentIndex(AlgoliaIndex):
         'owner_photoLink',
         'lastModifyingUser_displayName',
         'lastModifyingUser_photoLink',
-        'thumbnailLink'
+        'thumbnailLink',
+        'path'
     )

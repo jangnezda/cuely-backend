@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 from django.contrib.auth.models import User
 from django.db import models
 
+
 # Create your models here.
 class Document(models.Model):
     PENDING = 1
@@ -31,6 +32,7 @@ class Document(models.Model):
     lastModifyingUser_displayName = models.CharField(max_length=200, blank=True, null=True)
     lastModifyingUser_photoLink = models.CharField(max_length=500, blank=True, null=True)
     mimeType = models.CharField(max_length=200, blank=True, null=True)
+    path = models.CharField(max_length=2000, blank=True, null=True)
 
     def __str__(self):
         if self.title:
@@ -39,8 +41,8 @@ class Document(models.Model):
             return "Untitled document"
 
     def resync(self):
-        content = None;
-        download_status = Document.PENDING
+        self.content = None
+        self.download_status = Document.PENDING
 
 
 class SocialAttributes(models.Model):

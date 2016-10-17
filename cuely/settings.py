@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
@@ -123,8 +124,8 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
     'https://www.googleapis.com/auth/drive.readonly'
 ]
 SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
-      'access_type': 'offline',
-      'prompt': 'consent'
+    'access_type': 'offline',
+    'prompt': 'consent'
 }
 
 SOCIAL_AUTH_PIPELINE = (
