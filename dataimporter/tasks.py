@@ -262,7 +262,7 @@ def get_gdrive_path(file_id, folders):
 
 @shared_task
 def download_gdrive_document(doc, access_token, refresh_token):
-    if not any(x for x in EXPORTABLE_MIMES if doc.mimeType.startswith(x)):
+    if not any(x for x in EXPORTABLE_MIMES if doc.mime_type.startswith(x)):
         doc.download_status = Document.READY
         doc.save()
         return
@@ -275,8 +275,8 @@ def download_gdrive_document(doc, access_token, refresh_token):
 
         request = None
         if doc.mime_type.startswith('application/vnd.google-apps.'):
-            export_mime = 'text/csv' if 'spreadsheet' in doc.mimeType else 'text/plain'
-            request = service.files().export_media(fileId=doc.document_id, mime_type=export_mime)
+            export_mime = 'text/csv' if 'spreadsheet' in doc.mime_type else 'text/plain'
+            request = service.files().export_media(fileId=doc.document_id, mimeType=export_mime)
         else:
             request = service.files().get_media(fileId=doc.document_id)
         response = request.execute()
