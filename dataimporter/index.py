@@ -12,8 +12,8 @@ class DocumentIndex(AlgoliaIndex):
             'unordered(title)',
             'owner_display_name',
             'modifier_display_name',
-            'content',
-            'path'
+            'path',
+            'content'
         ],
         # adjust ranking formula
         'ranking': [
