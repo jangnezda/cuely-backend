@@ -7,9 +7,11 @@ class DocumentIndex(AlgoliaIndex):
     settings = {
         # list of attributes that are used for searching
         'attributesToIndex': [
+            'unordered(primary_keywords)',
+            'secondary_keywords',
             'unordered(title)',
-            'owner_displayName',
-            'lastModifyingUser_displayName',
+            'owner_display_name',
+            'modifier_display_name',
             'content',
             'path'
         ],
@@ -31,15 +33,17 @@ class DocumentIndex(AlgoliaIndex):
         'last_updated_ts',
         'last_updated',
         'content',
-        'mimeType',
-        'webViewLink',
+        'mime_type',
+        'webview_link',
         'requester',
         'user_id',
-        'iconLink',
-        'owner_displayName',
-        'owner_photoLink',
-        'lastModifyingUser_displayName',
-        'lastModifyingUser_photoLink',
-        'thumbnailLink',
-        'path'
+        'icon_link',
+        'owner_display_name',
+        'owner_photo_link',
+        'modifier_display_name',
+        'modifier_photo_link',
+        'thumbnail_link',
+        'path',
+        'primary_keywords',
+        'secondary_keywords'
     )

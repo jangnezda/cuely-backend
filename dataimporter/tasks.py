@@ -13,29 +13,29 @@ from oauth2client.client import GoogleCredentials
 
 from .models import Document, SocialAttributes
 
-exportable_mimes = [
+EXPORTABLE_MIMES = [
     'application/vnd.google-apps.spreadsheet',
     'application/vnd.google-apps.document',
     'application/vnd.google-apps.presentation',
     'text/'
 ]
 # list of ignored mime types for gdrive api calls
-ignored_mimes_api = [
+IGNORED_MIMES_API = [
     'application/vnd.google-apps.folder',
     'image/',
     'audio/',
     'video/'
 ]
 # list of ignored mime types for filtering the gdrive api results (file listings)
-ignored_mimes = [
+ignored_mimes_regex = [
     r'application/vnd.google-apps.folder',
     r'.*[-+/](zip|tar|gzip|bz2|rar|octet-stream).*',
     r'image/.*',
     r'video/.*',
     r'audio/.*'
 ]
-ignored_mimes_regex = [re.compile(x, re.UNICODE | re.IGNORECASE) for x in ignored_mimes]
-file_fieldset = ','.join([
+IGNORED_MIMES = [re.compile(x, re.UNICODE | re.IGNORECASE) for x in ignored_mimes_regex]
+FILE_FIELDSET = ','.join([
     'name',
     'id',
     'mimeType',
@@ -48,6 +48,38 @@ file_fieldset = ','.join([
     'owners(displayName,photoLink)',
     'parents'
 ])
+GDRIVE_KEYWORDS = {
+    'primary': 'gdrive,google drive',
+    'secondary': {
+        'application/pdf': 'pdf',
+        'application/vnd.google-apps.document': 'google docs,docs,documents',
+        'application/vnd.google-apps.spreadsheet': 'google sheets,sheets,spreadsheets',
+        'application/postscript': 'postscript',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'word,documents',
+        'application/vnd.google-apps.presentation': 'google slides,presentations,prezos,slides',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'excel,sheets,spreadsheets',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+            'ppt,powerpoint,presentations slides,prezos',
+        'text/xml': 'xml',
+        'text/plain': 'text file',
+        'application/x-iwork-numbers-sffnumbers': 'iwork,numbers',
+        'application/msword': 'word,documents',
+        'application/illustrator': 'illustrator',
+        'application/x-iwork-pages-sffpages': 'iwork,pages',
+        'application/vnd.ms-excel': 'excel,sheets,spreadsheets',
+        'application/vnd.ms-powerpoint': 'ppt,powerpoint,presentations slides,prezos',
+        'text/csv': 'csv',
+        'application/vnd.google-apps.drawing': 'google drawing,drawings',
+        'application/x-iwork-keynote-sffkey': 'keynote,slides,presentations,prezos',
+        'application/vnd.google-apps.form': 'google form,forms',
+        'text/html': 'html',
+        'application/x-javascript': 'javascript',
+        'application/xml': 'xml',
+        'application/rtf': 'rtf',
+        'text/css': 'css,stylesheets',
+        'application/vnd.ms-excel.sheet.macroenabled.12': 'excel,sheets,spreadsheets',
+    }
+}
 
 
 def start_synchronization(user):
@@ -84,11 +116,11 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
     def _call_gdrive(service, page_token):
         # want to produce 'q' filter like this:
         #    "pageSize = 300 and fields = '...' and not (mimeType contains 'image/' or mimeType contains ...)"
-        ignore_mime_types = ' or '.join(["mimeType contains '{}'".format(x) for x in ignored_mimes_api])
+        ignore_mime_types = ' or '.join(["mimeType contains '{}'".format(x) for x in IGNORED_MIMES_API])
         params = {
             'q': "not ({})".format(ignore_mime_types),
             'pageSize': 300,
-            'fields': 'files({}),nextPageToken'.format(file_fieldset)
+            'fields': 'files({}),nextPageToken'.format(FILE_FIELDSET)
         }
         if page_token:
             params['pageToken'] = page_token
@@ -104,7 +136,7 @@ def sync_gdrive_changes(requester, access_token, refresh_token, start_page_token
     def _call_gdrive(service, page_token):
         params = {
             'pageSize': 300,
-            'fields': 'changes(file({})),newStartPageToken,nextPageToken'.format(file_fieldset),
+            'fields': 'changes(file({})),newStartPageToken,nextPageToken'.format(FILE_FIELDSET),
             'pageToken': page_token or start_page_token,
             'spaces': 'drive',
             'includeRemoved': True,
@@ -140,7 +172,7 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             if 'file' in item:
                 item = item['file']
             # check for ignored mime types
-            if any(x.match(item.get('mimeType', '')) for x in ignored_mimes_regex):
+            if any(x.match(item.get('mimeType', '')) for x in IGNORED_MIMES):
                 continue
             if item.get('trashed'):
                 # file was removed
@@ -158,18 +190,21 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
                 user_id=requester.id
             )
             doc.title = item.get('name')
-            doc.mimeType = item.get('mimeType')
-            doc.webViewLink = item.get('webViewLink')
-            doc.iconLink = item.get('iconLink')
-            doc.thumbnailLink = item.get('thumbnailLink')
+            doc.mime_type = item.get('mimeType').lower()
+            doc.webview_link = item.get('webViewLink')
+            doc.icon_link = item.get('iconLink')
+            doc.thumbnail_link = item.get('thumbnailLink')
             doc.last_updated = item.get('modifiedTime')
             doc.path = json.dumps(path)
             last_modified_on_server = parse_date(doc.last_updated)
             doc.last_updated_ts = last_modified_on_server.timestamp()
-            doc.lastModifyingUser_displayName = item.get('lastModifyingUser', {}).get('displayName')
-            doc.lastModifyingUser_photoLink = item.get('lastModifyingUser', {}).get('photoLink')
-            doc.owner_displayName = item['owners'][0]['displayName']
-            doc.owner_photoLink = item.get('owners', [{}])[0].get('photoLink')
+            doc.modifier_display_name = item.get('lastModifyingUser', {}).get('displayName')
+            doc.modifier_photo_link = item.get('lastModifyingUser', {}).get('photoLink')
+            doc.owner_display_name = item['owners'][0]['displayName']
+            doc.owner_photo_link = item.get('owners', [{}])[0].get('photoLink')
+            doc.primary_keywords = GDRIVE_KEYWORDS['primary']
+            doc.secondary_keywords = GDRIVE_KEYWORDS['secondary'][doc.mime_type] \
+                if doc.mime_type in GDRIVE_KEYWORDS['secondary'] else None
             if not created:
                 if doc.download_status is Document.READY and \
                         (doc.last_synced is None or last_modified_on_server > doc.last_synced):
@@ -227,7 +262,7 @@ def get_gdrive_path(file_id, folders):
 
 @shared_task
 def download_gdrive_document(doc, access_token, refresh_token):
-    if not any(x for x in exportable_mimes if doc.mimeType.startswith(x)):
+    if not any(x for x in EXPORTABLE_MIMES if doc.mimeType.startswith(x)):
         doc.download_status = Document.READY
         doc.save()
         return
@@ -239,15 +274,15 @@ def download_gdrive_document(doc, access_token, refresh_token):
         service = connect_to_gdrive(access_token, refresh_token)
 
         request = None
-        if doc.mimeType.startswith('application/vnd.google-apps.'):
+        if doc.mime_type.startswith('application/vnd.google-apps.'):
             export_mime = 'text/csv' if 'spreadsheet' in doc.mimeType else 'text/plain'
-            request = service.files().export_media(fileId=doc.document_id, mimeType=export_mime)
+            request = service.files().export_media(fileId=doc.document_id, mime_type=export_mime)
         else:
             request = service.files().get_media(fileId=doc.document_id)
         response = request.execute()
         print("Done downloading {} [{}]".format(doc.title, doc.document_id))
 
-        content = cutUtfString(response.decode('UTF-8'), 9000, step=10)
+        content = cut_utf_string(response.decode('UTF-8'), 9000, step=10)
         doc.content = content
         utc_dt = datetime.now(timezone.utc)
         doc.last_synced = utc_dt.astimezone()
@@ -282,7 +317,7 @@ def connect_to_gdrive(access_token, refresh_token):
     return service
 
 
-def cutUtfString(s, bytes_len_max, step=1):
+def cut_utf_string(s, bytes_len_max, step=1):
     """
     Algolia has record limit of 10 kilobytes. Therefore, we need to cut file content to less than that.
     Unfortunately, there is no easy way to cut a UTF string to exact bytes length (characters may be in
