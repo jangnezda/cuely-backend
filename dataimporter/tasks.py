@@ -21,14 +21,12 @@ EXPORTABLE_MIMES = [
 ]
 # list of ignored mime types for gdrive api calls
 IGNORED_MIMES_API = [
-    'application/vnd.google-apps.folder',
     'image/',
     'audio/',
     'video/'
 ]
 # list of ignored mime types for filtering the gdrive api results (file listings)
 ignored_mimes_regex = [
-    r'application/vnd.google-apps.folder',
     r'.*[-+/](zip|tar|gzip|bz2|rar|octet-stream).*',
     r'image/.*',
     r'video/.*',
@@ -78,6 +76,7 @@ GDRIVE_KEYWORDS = {
         'application/rtf': 'rtf',
         'text/css': 'css,stylesheets',
         'application/vnd.ms-excel.sheet.macroenabled.12': 'excel,sheets,spreadsheets',
+        'application/vnd.google-apps.folder': 'folders,dirs'
     }
 }
 
@@ -119,6 +118,23 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
         ignore_mime_types = ' or '.join(["mimeType contains '{}'".format(x) for x in IGNORED_MIMES_API])
         params = {
             'q': "not ({})".format(ignore_mime_types),
+            'pageSize': 300,
+            'fields': 'files({}),nextPageToken'.format(FILE_FIELDSET)
+        }
+        if page_token:
+            params['pageToken'] = page_token
+        return service.files().list(**params).execute()
+
+    process_gdrive_docs(requester, access_token, refresh_token, files_fn=_call_gdrive, json_key='files')
+
+
+@shared_task
+def collect_gdrive_folders(requester, access_token, refresh_token):
+    print("LIST gdrive folders")
+
+    def _call_gdrive(service, page_token):
+        params = {
+            'q': "mimeType = 'application/vnd.google-apps.folder'",
             'pageSize': 300,
             'fields': 'files({}),nextPageToken'.format(FILE_FIELDSET)
         }
@@ -189,8 +205,10 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
                 requester=requester,
                 user_id=requester.id
             )
-            doc.title = item.get('name')
             doc.mime_type = item.get('mimeType').lower()
+            doc.title = item.get('name')
+            if 'application/vnd.google-apps.folder' in doc.mime_type:
+                doc.title = '/'.join(path + [doc.title])
             doc.webview_link = item.get('webViewLink')
             doc.icon_link = item.get('iconLink')
             doc.thumbnail_link = item.get('thumbnailLink')
