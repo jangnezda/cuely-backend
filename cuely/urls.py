@@ -16,9 +16,11 @@ Including another URLconf
 from django.conf.urls import url, include
 from django.contrib import admin
 from django.views.generic import RedirectView
+from . import views
 
 urlpatterns = [
     url(r'^$', RedirectView.as_view(url='/home/')),
+    url(r'^ping/?$', views.ping),
     url(r'^admin/', admin.site.urls),
     url(r'^home/', include('frontend.urls')),
     url(r'^accounts/profile/?$', RedirectView.as_view(url='/home/')),
