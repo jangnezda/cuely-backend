@@ -8,7 +8,7 @@ class DocumentIndex(AlgoliaIndex):
         # list of attributes that are used for searching
         'attributesToIndex': [
             'unordered(primary_keywords)',
-            'secondary_keywords',
+            'unordered(secondary_keywords)',
             'unordered(title)',
             'owner_display_name',
             'modifier_display_name',
