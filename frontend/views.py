@@ -68,7 +68,6 @@ def get_algolia_key(request):
 
 @require_POST
 def update_segment_status(request):
-    print (request.POST)
     if request.user.is_authenticated:
         try:
             ua = request.user.userattributes
