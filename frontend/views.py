@@ -68,13 +68,14 @@ def get_algolia_key(request):
 
 @require_POST
 def update_segment_status(request):
+    print (request.POST)
     if request.user.is_authenticated:
         try:
             ua = request.user.userattributes
         except UserAttributes.DoesNotExist:
             ua = UserAttributes()
             ua.user = request.user
-        ua.segment_identify = request.POST.get('identified', '0').lower() in ['1', 't', 'true', 'y', 'yes']
+        ua.segment_identify = request.GET.get('identified', '0').lower() in ['1', 't', 'true', 'y', 'yes']
         ua.save()
         return JsonResponse({
             'status': 'Ok',
