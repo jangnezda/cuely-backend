@@ -207,8 +207,6 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             )
             doc.mime_type = item.get('mimeType').lower()
             doc.title = item.get('name')
-            if 'application/vnd.google-apps.folder' in doc.mime_type:
-                doc.title = '/'.join(path + [doc.title])
             doc.webview_link = item.get('webViewLink')
             doc.icon_link = item.get('iconLink')
             doc.thumbnail_link = item.get('thumbnailLink')
