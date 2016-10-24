@@ -21,6 +21,7 @@ services:
       - REDIS_ENDPOINT=redis
       - MYSQL_USER=cuely-backend
       - MYSQL_PASSWORD=cuely-backend-password
+      - SEGMENT_KEY=CzbltQu3JSHIP6co82fYPTfBLDrHsCIC
 
   db:
     image: mysql

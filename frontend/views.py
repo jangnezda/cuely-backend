@@ -1,3 +1,4 @@
+import os
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
@@ -57,7 +58,8 @@ def get_algolia_key(request):
             'email': request.user.email,
             'appId': 'OPDWYH4IR4',
             'searchKey': '0b28a5913167a1618773992171c04344',
-            'segment': ua.segment_identify
+            'segmentKey': os.environ['SEGMENT_KEY'],
+            'segmentIdentified': ua.segment_identify
         })
     else:
         return HttpResponseForbidden()

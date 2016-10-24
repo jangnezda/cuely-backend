@@ -14,6 +14,7 @@ services:
       - REDIS_ENDPOINT=cuely-celery.h4s6xj.0001.euw1.cache.amazonaws.com
       - MYSQL_USER=root
       - MYSQL_PASSWORD=A1PMCIhlu1AB
+      - SEGMENT_KEY=CzbltQu3JSHIP6co82fYPTfBLDrHsCIC
 
   worker:
     image: pipetop/cuely-backend
