@@ -55,6 +55,7 @@ def get_algolia_key(request):
         return JsonResponse({
             'userid': request.user.id,
             'username': request.user.username,
+            'name': request.user.first_name + ' ' + request.user.last_name,
             'email': request.user.email,
             'appId': 'OPDWYH4IR4',
             'searchKey': '0b28a5913167a1618773992171c04344',
