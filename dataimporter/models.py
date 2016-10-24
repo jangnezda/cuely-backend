@@ -50,3 +50,8 @@ class Document(models.Model):
 class SocialAttributes(models.Model):
     start_page_token = models.CharField(max_length=100, blank=True, null=True)
     user = models.ForeignKey(User)
+
+
+class UserAttributes(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    segment_identify = models.BooleanField(blank=False, null=False, default=True)

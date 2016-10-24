@@ -172,9 +172,7 @@ CELERYBEAT_SCHEDULE = {
     },
 }
 
-
 # Algolia setup
-
 ALGOLIA = {
     'APPLICATION_ID': os.environ['ALGOLIA_APPLICATION_ID'],
     'API_KEY': os.environ['ALGOLIA_API_KEY']
