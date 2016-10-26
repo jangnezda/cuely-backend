@@ -8,15 +8,12 @@ from dataimporter.tasks import start_synchronization as docs_sync
 
 
 def index(request):
-    documents = []
     backends = []
     if request.user.is_authenticated:
-        try:
-            backends.append("google-oauth2")
-            documents = Document.objects.filter(requester=request.user)
-        except:
-            pass
-    return render(request, 'frontend/index.html', {"user": request.user, "documents": documents, "backends": backends})
+        for sa in request.user.social_auth.all():
+            backends.append(sa.provider)
+
+    return render(request, 'frontend/index.html', {'backends': backends})
 
 
 def start_synchronization(request):

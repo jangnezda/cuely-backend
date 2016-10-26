@@ -2,16 +2,18 @@ Django==1.10
 django-extensions
 django-registration==2.1.2
 
-algoliasearch-django==1.2.4
 mysqlclient
-requests-oauthlib==0.7.0
-python-social-auth==0.2.21
 ipython
-
 django-bootstrap3
+python-dateutil==2.5.3
 
 celery[redis]
 
+requests-oauthlib==0.7.0
+python-social-auth==0.2.21
+
+# integrations
 google-api-python-client==1.5.3
 oauth2client==3.0.0
-python-dateutil==2.5.3
+algoliasearch-django==1.2.4
+python-intercom==2.1.1
