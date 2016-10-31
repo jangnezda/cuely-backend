@@ -115,6 +115,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTHENTICATION_BACKENDS = (
     'social.backends.google.GoogleOAuth2',
+    'dataimporter.auth.IntercomOauth',
     'django.contrib.auth.backends.ModelBackend',
 )
 
@@ -127,6 +128,9 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
     'access_type': 'offline',
     'prompt': 'consent'
 }
+
+SOCIAL_AUTH_INTERCOM_OAUTH_KEY = os.environ['INTERCOM_API_CLIENT_ID']
+SOCIAL_AUTH_INTERCOM_OAUTH_SECRET = os.environ['INTERCOM_API_CLIENT_SECRET']
 
 SOCIAL_AUTH_PIPELINE = (
     'social.pipeline.social_auth.social_details',
@@ -160,14 +164,14 @@ STATIC_URL = '/static/'
 
 # Celery settings
 
-CELERY_IMPORTS = ('dataimporter.tasks',)
+CELERY_IMPORTS = ('dataimporter.tasks.gdrive', 'dataimporter.tasks.intercom')
 
 CELERY_BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 CELERY_RESULT_BACKEND = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/1'
 CELERYBEAT_SCHEDULE = {
     'sync-every-60-seconds': {
-        'task': 'dataimporter.tasks.update_synchronization',
+        'task': 'dataimporter.tasks.gdrive.update_synchronization',
         'schedule': timedelta(seconds=60),
     },
 }
