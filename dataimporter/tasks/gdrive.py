@@ -11,7 +11,7 @@ from apiclient import discovery
 from celery import shared_task, subtask
 from oauth2client.client import GoogleCredentials
 
-from .models import Document, SocialAttributes
+from dataimporter.models import Document, SocialAttributes
 
 EXPORTABLE_MIMES = [
     'application/vnd.google-apps.spreadsheet',
@@ -276,10 +276,16 @@ def get_gdrive_path(file_id, folders):
     return path
 
 
+def _get_utc_timestamp():
+    utc_dt = datetime.now(timezone.utc)
+    return utc_dt.astimezone()
+
+
 @shared_task
 def download_gdrive_document(doc, access_token, refresh_token):
     if not any(x for x in EXPORTABLE_MIMES if doc.mime_type.startswith(x)):
         doc.download_status = Document.READY
+        doc.last_synced = _get_utc_timestamp()
         doc.save()
         return
 
@@ -300,8 +306,7 @@ def download_gdrive_document(doc, access_token, refresh_token):
 
         content = cut_utf_string(response.decode('UTF-8'), 9000, step=10)
         doc.content = content
-        utc_dt = datetime.now(timezone.utc)
-        doc.last_synced = utc_dt.astimezone()
+        doc.last_synced = _get_utc_timestamp()
         doc.download_status = Document.READY
         doc.save()
     except:

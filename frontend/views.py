@@ -1,10 +1,16 @@
 import os
-from django.http import HttpResponseForbidden, JsonResponse
+from django.http import HttpResponseForbidden, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
 
 from dataimporter.models import Document, UserAttributes
-from dataimporter.tasks import start_synchronization as docs_sync
+from dataimporter.tasks.gdrive import start_synchronization as gdrive_sync
+from dataimporter.tasks.intercom import start_synchronization as intercom_sync
+
+sync_mapping = {
+    'google-oauth2': gdrive_sync,
+    'intercom-oauth': intercom_sync
+}
 
 
 def index(request):
@@ -16,12 +22,17 @@ def index(request):
     return render(request, 'frontend/index.html', {'backends': backends})
 
 
+@require_POST
 def start_synchronization(request):
-    try:
-        if request.user.is_authenticated:
-            docs_sync(user=request.user)
-    except:
-        pass
+    if request.user.is_authenticated:
+        provider = request.GET.get('provider', '').lower()
+        if not provider:
+            return HttpResponseBadRequest("Missing 'provider' parameter")
+
+        auth_backend = request.user.social_auth.find(provider=provider).first()
+        if not auth_backend:
+            return HttpResponseBadRequest("Provider '{}' not yet authorized".format(provider))
+        sync_mapping[provider](user=request.user)
     return redirect('/home/')
 
 
