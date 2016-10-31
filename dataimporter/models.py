@@ -4,7 +4,6 @@ from django.contrib.auth.models import User
 from django.db import models
 
 
-# Create your models here.
 class Document(models.Model):
     PENDING = 1
     PROCESSING = 2
@@ -15,7 +14,7 @@ class Document(models.Model):
         (READY, 'Ready'),
     )
 
-    document_id = models.CharField(max_length=200)
+    document_id = models.CharField(max_length=200, null=True)
     title = models.CharField(max_length=500, blank=True, null=True)
     last_synced = models.DateTimeField(blank=True, null=True)
     last_updated = models.DateTimeField(auto_now_add=True)
@@ -35,6 +34,15 @@ class Document(models.Model):
     path = models.CharField(max_length=2000, blank=True, null=True)
     primary_keywords = models.CharField(max_length=500, blank=True, null=True)
     secondary_keywords = models.CharField(max_length=500, blank=True, null=True)
+    intercom_user_id = models.CharField(max_length=200, null=True)
+    intercom_email = models.CharField(max_length=200, null=True)
+    intercom_title = models.CharField(max_length=500, blank=True, null=True)
+    intercom_avatar_link = models.CharField(max_length=500, blank=True, null=True)
+    intercom_session_count = models.IntegerField(null=True)
+    intercom_segments = models.CharField(max_length=500, blank=True, null=True)
+    intercom_plan = models.CharField(max_length=100, blank=True, null=True)
+    intercom_monthly_spend = models.IntegerField(null=True)
+    intercom_content = models.TextField(blank=True, null=True)
 
     def __str__(self):
         if self.title:

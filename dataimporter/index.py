@@ -26,17 +26,22 @@ class DocumentIndex(AlgoliaIndex):
             'words'
         ]
     }
-    # only following Document fields will be synced to Algolia
+    # only following fields will be synced to Algolia
     fields = (
-        'document_id',
-        'title',
+        # Common
         'last_updated_ts',
         'last_updated',
+        'webview_link',
+        'user_id',
+        'requester',
+        'primary_keywords',
+        'secondary_keywords',
+
+        # Document
+        'document_id',
+        'title',
         'content',
         'mime_type',
-        'webview_link',
-        'requester',
-        'user_id',
         'icon_link',
         'owner_display_name',
         'owner_photo_link',
@@ -44,6 +49,14 @@ class DocumentIndex(AlgoliaIndex):
         'modifier_photo_link',
         'thumbnail_link',
         'path',
-        'primary_keywords',
-        'secondary_keywords'
+
+        # IntercomUser
+        'intercom_user_id',
+        'intercom_email',
+        'intercom_title',
+        'intercom_content',
+        'intercom_session_count',
+        'intercom_segments',
+        'intercom_plan',
+        'intercom_monthly_spend'
     )
