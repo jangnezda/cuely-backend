@@ -35,8 +35,6 @@ def collect_users(requester):
         db_user.intercom_email = u.email
         db_user.intercom_title = 'User: {}'.format(u.name)
         db_user.last_updated_ts = u.__dict__.get('last_request_at', u.__dict__.get('updated_at'))
-        ddd = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
-        logger.info('SINICA %s %s', type(ddd), ddd)
         db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
         db_user.webview_link = 'https://app.intercom.io/a/apps/{}/users/{}'.format(u.app_id, u.id)
         db_user.primary_keywords = INTERCOM_KEYWORDS['primary']

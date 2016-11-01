@@ -210,7 +210,6 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             doc.webview_link = item.get('webViewLink')
             doc.icon_link = item.get('iconLink')
             doc.thumbnail_link = item.get('thumbnailLink')
-            logger.info('BABURA %s %s', type(item.get('modifiedTime')), item.get('modifiedTime'))
             doc.last_updated = item.get('modifiedTime')
             doc.path = json.dumps(path)
             last_modified_on_server = parse_date(doc.last_updated)
