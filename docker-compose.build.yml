@@ -85,6 +85,8 @@ services:
       - REDIS_ENDPOINT=redis
       - MYSQL_USER=cuely-backend
       - MYSQL_PASSWORD=cuely-backend-password
+      - INTERCOM_API_CLIENT_ID=e61a4de4-ab3f-45be-a6a4-a75b506de67b
+      - INTERCOM_API_CLIENT_SECRET=e836f3c8-a63d-4781-810e-9761028af063
     command: /usr/src/app/start_beat.sh
 
   ngrok:

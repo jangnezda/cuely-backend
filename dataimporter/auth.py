@@ -9,6 +9,10 @@ class IntercomOauth(BaseOAuth2):
     AUTHORIZATION_URL = 'https://app.intercom.io/oauth'
     ACCESS_TOKEN_URL = 'https://api.intercom.io/auth/eagle/token'
     ACCESS_TOKEN_METHOD = 'POST'
+    EXTRA_DATA = [
+        ('email', 'email'),
+        ('name', 'name'),
+    ]
 
     def get_user_details(self, response):
         """Return user details from Intercom account"""
