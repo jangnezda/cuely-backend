@@ -1,6 +1,4 @@
 import os
-import sys
-import traceback
 import httplib2
 import json
 import re
@@ -12,6 +10,8 @@ from celery import shared_task, subtask
 from oauth2client.client import GoogleCredentials
 
 from dataimporter.models import Document, SocialAttributes
+import logging
+logger = logging.getLogger(__name__)
 
 EXPORTABLE_MIMES = [
     'application/vnd.google-apps.spreadsheet',
@@ -102,7 +102,7 @@ def update_synchronization():
     Check for new/updated files in external systems for all users. Should be called periodically after initial syncing.
     Gdrive-only at the moment.
     """
-    print("Update synchronizations started")
+    logger.debug("Update synchronizations started")
     for sa in SocialAttributes.objects.filter(start_page_token__isnull=False):
         access_token, refresh_token = get_google_tokens(sa.user)
         subtask(sync_gdrive_changes).delay(sa.user, access_token, refresh_token, sa.start_page_token)
@@ -110,7 +110,7 @@ def update_synchronization():
 
 @shared_task
 def collect_gdrive_docs(requester, access_token, refresh_token):
-    print("LIST gdrive files")
+    logger.debug("LIST gdrive files")
 
     def _call_gdrive(service, page_token):
         # want to produce 'q' filter like this:
@@ -130,7 +130,7 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
 
 @shared_task
 def collect_gdrive_folders(requester, access_token, refresh_token):
-    print("LIST gdrive folders")
+    logger.debug("LIST gdrive folders")
 
     def _call_gdrive(service, page_token):
         params = {
@@ -147,7 +147,7 @@ def collect_gdrive_folders(requester, access_token, refresh_token):
 
 @shared_task
 def sync_gdrive_changes(requester, access_token, refresh_token, start_page_token):
-    print("CHANGES gdrive files")
+    logger.debug("CHANGES gdrive files")
 
     def _call_gdrive(service, page_token):
         params = {
@@ -210,6 +210,7 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             doc.webview_link = item.get('webViewLink')
             doc.icon_link = item.get('iconLink')
             doc.thumbnail_link = item.get('thumbnailLink')
+            logger.info('BABURA %s %s', type(item.get('modifiedTime')), item.get('modifiedTime'))
             doc.last_updated = item.get('modifiedTime')
             doc.path = json.dumps(path)
             last_modified_on_server = parse_date(doc.last_updated)
@@ -302,16 +303,16 @@ def download_gdrive_document(doc, access_token, refresh_token):
         else:
             request = service.files().get_media(fileId=doc.document_id)
         response = request.execute()
-        print("Done downloading {} [{}]".format(doc.title, doc.document_id))
+        logger.info("Done downloading {} [{}]".format(doc.title, doc.document_id))
 
         content = cut_utf_string(response.decode('UTF-8'), 9000, step=10)
         doc.content = content
         doc.last_synced = _get_utc_timestamp()
         doc.download_status = Document.READY
         doc.save()
-    except:
-        traceback.print_exc(file=sys.stdout)
-        print("Deleting file {},{} because it couldn't be exported".format(doc.title, doc.document_id))
+    except Exception as e:
+        logger.error(e)
+        logger.error("Deleting file {},{} because it couldn't be exported".format(doc.title, doc.document_id))
         doc.delete()
 
 

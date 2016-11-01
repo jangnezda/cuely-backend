@@ -8,6 +8,8 @@ from celery import shared_task, subtask
 from intercom import Event, Intercom, User, Admin, Company, Segment, Conversation, AuthenticationError
 
 from dataimporter.models import Document
+import logging
+logger = logging.getLogger(__name__)
 
 INTERCOM_KEYWORDS = {
     'primary': 'inter,intercom',
@@ -32,15 +34,17 @@ def collect_users(requester):
         )
         db_user.intercom_email = u.email
         db_user.intercom_title = 'User: {}'.format(u.name)
-        db_user.last_updated = u.last_request_at or u.updated_at
         db_user.last_updated_ts = u.__dict__.get('last_request_at', u.__dict__.get('updated_at'))
+        ddd = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
+        logger.info('SINICA %s %s', type(ddd), ddd)
+        db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
         db_user.webview_link = 'https://app.intercom.io/a/apps/{}/users/{}'.format(u.app_id, u.id)
         db_user.primary_keywords = INTERCOM_KEYWORDS['primary']
         db_user.secondary_keywords = INTERCOM_KEYWORDS['secondary']
         db_user.intercom_session_count = u.session_count
         db_user.intercom_avatar_link = u.avatar.image_url
         db_user.save()
-        # can't pickle whole user object, because it contains helper methods like 'load', 'find', etc.
+        # can't pickle whole Intercom user object, because it contains helper methods like 'load', 'find', etc.
         # therefore, let's just copy the data we're interested in
         intercom_user = {
             'id': u.id,
@@ -48,18 +52,13 @@ def collect_users(requester):
             'segments': list(map(lambda x: x.id, u.segments)),
             'companies': list(map(lambda x: x.id, u.companies))
         }
-        subtask(process_user).delay(requester, intercom_user)
+        subtask(process_user).delay(requester, intercom_user, db_user)
 
 
 @shared_task
-def process_user(requester, user):
+def process_user(requester, user, db_user):
     """ Further processing of the user, e.g. load events, companies, conversations """
     init_intercom(requester)
-    db_user = Document.objects.filter(intercom_user_id=user['id']).first()
-    if not db_user:
-        print ("Could not find user '{}' with id: {}".format(user['name'], user['id']))
-        return
-
     db_user.download_status = Document.PROCESSING
     db_user.save()
 

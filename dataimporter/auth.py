@@ -12,12 +12,18 @@ class IntercomOauth(BaseOAuth2):
     EXTRA_DATA = [
         ('email', 'email'),
         ('name', 'name'),
+        ('app_id', 'app_id'),
+        ('app_name', 'app_name')
     ]
 
     def get_user_details(self, response):
         """Return user details from Intercom account"""
-        return {'email': response.get('email') or '',
-                'name': response.get('name')}
+        return {
+            'email': response.get('email') or '',
+            'name': response.get('name'),
+            'app_id': response.get('app', {}).get('id_code'),
+            'app_name': response.get('app', {}).get('name'),
+        }
 
     def user_data(self, access_token, *args, **kwargs):
         """Load user data from service"""
