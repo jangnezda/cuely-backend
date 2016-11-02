@@ -1,6 +1,7 @@
 
 {% extends "base.html" %}
 {% load i18n %}
+{% load static %}
 
 {% block content %}
 {% if request.user.is_authenticated %}
@@ -19,16 +20,15 @@
       </a>
     {% endif %}
 
-    {% if "intercom-oauth" not in backends %}
-      <a class="btn btn-block btn-social btn-reddit" href="/login/intercom-oauth">
-        <img src="http://seeklogo.com/images/I/intercom-logo-B222146C9B-seeklogo.com.png" style="padding: 3px">Add Intercom integration
+    {% if "intercom-apikeys" not in backends %}
+      <a class="btn btn-block btn-social btn-reddit" href="/login/intercom-apikeys">
+        <img src="{% static "frontend/intercom-logo.png" %}" style="padding: 3px">Add Intercom integration
       </a>
     {% else %}
       <a class="btn disabled btn-block btn-social btn-reddit" href="#">
-        <img src="http://seeklogo.com/images/I/intercom-logo-B222146C9B-seeklogo.com.png" style="padding: 3px">Intercom integration is ready
+        <img src="{% static "frontend/intercom-logo.png" %}" style="padding: 3px">Intercom integration is ready
       </a>
     {% endif %}
-
   </div>
 </div>
 {% else %}

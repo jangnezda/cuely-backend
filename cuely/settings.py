@@ -116,6 +116,7 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTHENTICATION_BACKENDS = (
     'social.backends.google.GoogleOAuth2',
     'dataimporter.auth.IntercomOauth',
+    'dataimporter.auth.IntercomApiKeysAuth',
     'django.contrib.auth.backends.ModelBackend',
 )
 
@@ -131,6 +132,8 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
 
 SOCIAL_AUTH_INTERCOM_OAUTH_KEY = os.environ['INTERCOM_API_CLIENT_ID']
 SOCIAL_AUTH_INTERCOM_OAUTH_SECRET = os.environ['INTERCOM_API_CLIENT_SECRET']
+
+SOCIAL_AUTH_INTERCOM_APIKEYS_FORM_URL = '/home/intercom_apikeys/'
 
 SOCIAL_AUTH_PIPELINE = (
     'social.pipeline.social_auth.social_details',

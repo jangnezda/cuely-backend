@@ -8,5 +8,6 @@ urlpatterns = [
     url(r'sync/?$', views.start_synchronization),
     url(r'sync_status/?', views.sync_status),
     url(r'intercom_hook/?', views.intercom_callback),
+    url(r'intercom_apikeys/?', views.intercom_apikeys),
     url(r'', views.index, name='index'),
 ]

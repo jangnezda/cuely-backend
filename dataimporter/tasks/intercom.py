@@ -149,9 +149,13 @@ def fetch_user(user_or_admin_id):
 
 
 def init_intercom(user):
-    social = user.social_auth.get(provider='intercom-oauth')
-    access_token = social.extra_data['access_token']
-    Intercom.app_id = access_token
+    social = user.social_auth.filter(provider='intercom-apikeys').first()
+    if social:
+        Intercom.app_id = social.extra_data['app_id']
+        Intercom.app_api_key = social.extra_data['api_key']
+    else:
+        social = user.social_auth.get(provider='intercom-oauth')
+        Intercom.app_id = social.extra_data['access_token']
 
 
 def _get_utc_timestamp():

@@ -13,7 +13,8 @@ import logging
 logger = logging.getLogger(__name__)
 sync_mapping = {
     'google-oauth2': gdrive_sync,
-    'intercom-oauth': intercom_sync
+    'intercom-oauth': intercom_sync,
+    'intercom-apikeys': intercom_sync
 }
 
 
@@ -24,6 +25,10 @@ def index(request):
             backends.append(sa.provider)
 
     return render(request, 'frontend/index.html', {'backends': backends})
+
+
+def intercom_apikeys(request):
+    return render(request, 'frontend/intercom_apikeys.html', {})
 
 
 @require_POST
