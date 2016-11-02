@@ -10,10 +10,12 @@ class DocumentIndex(AlgoliaIndex):
             'unordered(primary_keywords)',
             'unordered(secondary_keywords)',
             'unordered(title)',
+            'unordered(intercom_title)',
             'owner_display_name',
             'modifier_display_name',
             'path',
-            'content'
+            'content',
+            'intercom_content'
         ],
         # adjust ranking formula
         'ranking': [
