@@ -88,7 +88,7 @@ def process_user(requester, user, db_user):
 
     conversations, conversation_open = process_conversations(user['id'], user['name'])
     content['conversations'] = conversations
-    db_user.content = json.dumps(content)
+    db_user.intercom_content = json.dumps(content)
     db_user.intercom_conversation_open = conversation_open
     db_user.last_synced = _get_utc_timestamp()
     db_user.download_status = Document.READY
