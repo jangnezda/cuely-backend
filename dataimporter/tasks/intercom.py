@@ -8,6 +8,7 @@ from celery import shared_task, subtask
 from intercom import Event, Intercom, User, Admin, Company, Segment, Conversation, AuthenticationError
 
 from dataimporter.models import Document
+from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,13 @@ INTERCOM_KEYWORDS = {
 def start_synchronization(user):
     """ Run initial syncing of user's data in intercom. """
     collect_users.delay(requester=user)
+
+
+@shared_task
+def update_synchronization():
+    """ Run re-syncing of user's data in intercom. """
+    for us in UserSocialAuth.objects.filter(provider='intercom-apikeys'):
+        collect_users.delay(requester=us.user)
 
 
 @shared_task

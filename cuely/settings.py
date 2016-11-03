@@ -177,6 +177,10 @@ CELERYBEAT_SCHEDULE = {
         'task': 'dataimporter.tasks.gdrive.update_synchronization',
         'schedule': timedelta(seconds=60),
     },
+    'sync-every-300-seconds': {
+        'task': 'dataimporter.tasks.intercom.update_synchronization',
+        'schedule': timedelta(seconds=300),
+    },
 }
 
 # Algolia setup
