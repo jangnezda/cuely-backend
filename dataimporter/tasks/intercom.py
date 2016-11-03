@@ -40,6 +40,9 @@ def collect_users(requester):
             requester=requester,
             user_id=requester.id
         )
+        old_updated_ts = None
+        if not created:
+            old_updated_ts = db_user.last_updated_ts
         db_user.intercom_email = u.email
         db_user.intercom_title = 'User: {}'.format(u.name)
         db_user.last_updated_ts = u.__dict__.get('last_request_at', u.__dict__.get('updated_at'))
@@ -56,7 +59,8 @@ def collect_users(requester):
             'id': u.id,
             'name': u.name,
             'segments': list(map(lambda x: x.id, u.segments)),
-            'companies': list(map(lambda x: x.id, u.companies))
+            'companies': list(map(lambda x: x.id, u.companies)),
+            'old_updated_ts': old_updated_ts
         }
         subtask(process_user).delay(requester, intercom_user, db_user)
 
@@ -69,6 +73,31 @@ def process_user(requester, user, db_user):
     db_user.save()
 
     print ("Processing user '{}' with data: {}".format(user['name'], user))
+    # build json for content -> events and conversations
+    content = {
+        'events': [],
+        'conversations': []
+    }
+    for e in Event.find(type='user', intercom_user_id=user['id'], per_page=10).events:
+        content['events'].append({
+            'name': e['event_name'],
+            'timestamp': e['created_at']
+        })
+    if len(content['events']) > 0:
+        db_user.last_updated_ts = max(db_user.last_updated_ts, content['events'][0].get('timestamp', 0))
+        db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
+
+    # check if the last event timestamp/seen timestamp is different than old one
+    old_updated_ts = db_user.get('old_updated_ts')
+    if old_updated_ts and old_updated_ts >= db_user.last_updated_ts:
+        db_user.last_updated_ts = old_updated_ts
+        db_user.download_status = Document.READY
+        db_user.save()
+        return
+
+    content['conversations'] = process_conversations(user['id'], user['name'])
+    db_user.intercom_content = json.dumps(content)
+
     # companies ... only use first one, add others when/if necessary
     if user['companies']:
         c = Company.find(id=user['companies'][0])
@@ -84,22 +113,7 @@ def process_user(requester, user, db_user):
             segments.append(s.name)
     if segments:
         db_user.intercom_segments = ', '.join(segments)
-    # build json for content -> events and conversations
-    content = {
-        'events': [],
-        'conversations': []
-    }
-    for e in Event.find(type='user', intercom_user_id=user['id'], per_page=10).events:
-        content['events'].append({
-            'name': e['event_name'],
-            'timestamp': e['created_at']
-        })
-    if len(content['events']) > 0:
-        db_user.last_updated_ts = max(db_user.last_updated_ts, content['events'][0].get('timestamp', 0))
-        db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
 
-    content['conversations'] = process_conversations(user['id'], user['name'])
-    db_user.intercom_content = json.dumps(content)
     db_user.last_synced = _get_utc_timestamp()
     db_user.download_status = Document.READY
     db_user.save()
