@@ -65,6 +65,7 @@ def process_user(requester, user, db_user):
     if user['companies']:
         c = Company.find(id=user['companies'][0])
         if c:
+            db_user.intercom_company = c.name
             db_user.intercom_plan = c.plan.get('name')
             db_user.intercom_monthly_spend = c.monthly_spend
     # segments
