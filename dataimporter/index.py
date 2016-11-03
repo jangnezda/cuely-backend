@@ -60,6 +60,5 @@ class DocumentIndex(AlgoliaIndex):
         'intercom_session_count',
         'intercom_segments',
         'intercom_plan',
-        'intercom_monthly_spend',
-        'intercom_conversation_open'
+        'intercom_monthly_spend'
     )

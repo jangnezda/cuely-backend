@@ -81,15 +81,16 @@ def process_user(requester, user, db_user):
         'conversations': []
     }
     for e in Event.find(type='user', intercom_user_id=user['id'], per_page=10).events:
-        content['events'].insert(0, {
+        content['events'].append({
             'name': e['event_name'],
             'timestamp': e['created_at']
         })
+    if len(content['events']) > 0:
+        db_user.last_updated_ts = max(db_user.last_updated_ts, content['events'][0].get('timestamp', 0))
+        db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
 
-    conversations, conversation_open = process_conversations(user['id'], user['name'])
-    content['conversations'] = conversations
+    content['conversations'] = process_conversations(user['id'], user['name'])
     db_user.intercom_content = json.dumps(content)
-    db_user.intercom_conversation_open = conversation_open
     db_user.last_synced = _get_utc_timestamp()
     db_user.download_status = Document.READY
     db_user.save()
@@ -97,7 +98,6 @@ def process_user(requester, user, db_user):
 
 def process_conversations(user_id, user_name):
     result = []
-    conversation_open = False
     # cached participants
     users = {user_id: user_name}
 
@@ -124,19 +124,19 @@ def process_conversations(user_id, user_name):
                 items.append({
                     'timestamp': part.__dict__['created_at'],
                     'author': _find_user(part.author.id),
+                    'author_id': part.author.id,
                     'body': part.body
                 })
             result.append({
                 'subject': conversation.get('conversation_message', {}).get('subject', ''),
+                'open': conversation.get('open', False),
                 'items': items
             })
-            if conversation.get('open', False):
-                conversation_open = True
     except AuthenticationError:
         # conversations are only available on paid accounts that have 'Engage' plan
         # ... or in other words, has to be an account that has enabled in-app messaging
         print ("Could not fetch conversations for user '{}' with id: {}".format(user_name, user_id))
-    return (result, conversation_open)
+    return result
 
 
 def fetch_user(user_or_admin_id):

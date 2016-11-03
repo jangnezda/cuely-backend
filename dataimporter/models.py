@@ -43,7 +43,6 @@ class Document(models.Model):
     intercom_plan = models.CharField(max_length=100, blank=True, null=True)
     intercom_monthly_spend = models.IntegerField(null=True)
     intercom_content = models.TextField(blank=True, null=True)
-    intercom_conversation_open = models.BooleanField(blank=False, null=False, default=False)
 
     def __str__(self):
         if self.title:
