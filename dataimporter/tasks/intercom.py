@@ -145,7 +145,7 @@ def process_conversations(user_id, user_name):
             }]
             parts = Conversation.find(id=conversation['id'])
             for part in parts.conversation_parts:
-                items.append({
+                items.insert(0, {
                     'timestamp': part.__dict__['created_at'],
                     'author': _find_user(part.author.id),
                     'author_id': part.author.id,
