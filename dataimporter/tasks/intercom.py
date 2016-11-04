@@ -72,7 +72,7 @@ def process_user(requester, user, db_user):
     db_user.download_status = Document.PROCESSING
     db_user.save()
 
-    print ("Processing user '{}' with data: {}".format(user['name'], user))
+    logger.info("Processing user '%s' with data: %s", user['name'], user)
     # build json for content -> events and conversations
     content = {
         'events': [],
@@ -88,8 +88,9 @@ def process_user(requester, user, db_user):
         db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
 
     # check if the last event timestamp/seen timestamp is different than old one
-    old_updated_ts = db_user.get('old_updated_ts')
+    old_updated_ts = user.get('old_updated_ts')
     if old_updated_ts and old_updated_ts >= db_user.last_updated_ts:
+        logger.info("User '%s' seems unchanged, skipping further processing", user['name'])
         db_user.last_updated_ts = old_updated_ts
         db_user.download_status = Document.READY
         db_user.save()
@@ -158,7 +159,7 @@ def process_conversations(user_id, user_name):
     except AuthenticationError:
         # conversations are only available on paid accounts that have 'Engage' plan
         # ... or in other words, has to be an account that has enabled in-app messaging
-        print ("Could not fetch conversations for user '{}' with id: {}".format(user_name, user_id))
+        logger.warn("Could not fetch conversations for user '%s' with id: %s", user_name, user_id)
     return result
 
 
