@@ -31,6 +31,10 @@ def intercom_apikeys(request):
     return render(request, 'frontend/intercom_apikeys.html', {})
 
 
+def pipedrive_apikeys(request):
+    return render(request, 'frontend/pipedrive_apikeys.html', {})
+
+
 @require_POST
 def start_synchronization(request):
     if request.user.is_authenticated:

@@ -29,6 +29,16 @@
         <img src="{% static "frontend/intercom-logo.png" %}" style="padding: 3px">Intercom integration is ready
       </a>
     {% endif %}
+
+    {% if "pipedrive-apikeys" not in backends %}
+      <a class="btn btn-block btn-social btn-vk" href="/login/pipedrive-apikeys">
+        <img src="{% static "frontend/pipedrive-logo.png" %}" style="padding: 3px">Add Pipedrive integration
+      </a>
+    {% else %}
+      <a class="btn disabled btn-block btn-social btn-vk" href="#">
+        <img src="{% static "frontend/pipedrive-logo.png" %}" style="padding: 3px">Pipedrive integration is ready
+      </a>
+    {% endif %}
   </div>
 </div>
 {% else %}
