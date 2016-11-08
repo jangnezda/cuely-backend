@@ -162,6 +162,7 @@ USE_L10N = True
 
 USE_TZ = True
 
+SESSION_COOKIE_AGE = 15552000 # 6 months
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
@@ -176,17 +177,17 @@ CELERY_BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 CELERY_RESULT_BACKEND = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/1'
 CELERYBEAT_SCHEDULE = {
-    'sync-every-60-seconds': {
+    'sync-gdrive': {
         'task': 'dataimporter.tasks.gdrive.update_synchronization',
         'schedule': timedelta(seconds=60),
     },
-    'sync-every-300-seconds': {
+    'sync-intercom': {
         'task': 'dataimporter.tasks.intercom.update_synchronization',
         'schedule': timedelta(seconds=300),
     },
-    'sync-every-240-seconds': {
+    'sync-pipedrive': {
         'task': 'dataimporter.tasks.pipedrive.update_synchronization',
-        'schedule': timedelta(seconds=240),
+        'schedule': timedelta(seconds=80),
     },
 }
 
