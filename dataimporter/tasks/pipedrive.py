@@ -4,6 +4,7 @@ we simply list all deals and store them to database.
 """
 from pypedriver import Client
 import json
+import time
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_dt
 from celery import shared_task
@@ -70,6 +71,8 @@ def collect_deals(requester):
         db_deal.last_synced = _get_utc_timestamp()
         db_deal.download_status = Document.READY
         db_deal.save()
+        # add sleep of one second to avoid breaking API rate limits
+        time.sleep(1)
 
 
 def build_deal_content(deal, users, org_domain, pipe_client):
