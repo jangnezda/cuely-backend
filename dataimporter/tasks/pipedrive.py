@@ -25,7 +25,7 @@ def start_synchronization(user):
 
 
 @shared_task
-def update_synchronization(user):
+def update_synchronization():
     """
     Run sync/update of all users' deals data in pipedrive.
     Should be run periodically to keep the data fresh in our db.
@@ -49,12 +49,14 @@ def collect_deals(requester):
         )
         if not created:
             # compare timestamps and skip the deal if it hasn't been updated
+            logger.debug('%d %d', db_deal.last_updated_ts, parse_dt(deal.update_time).timestamp())
             if db_deal.last_updated_ts >= parse_dt(deal.update_time).timestamp():
-                return
+                logger.debug("Deal '%s' for user '%s' hasn't changed", deal.title, requester.username)
+                continue
 
         db_deal.primary_keywords = PIPEDRIVE_KEYWORDS['primary']
         db_deal.secondary_keywords = PIPEDRIVE_KEYWORDS['secondary']
-        db_deal.pipedrive_title = 'Deal: {}'.format(deal.title)
+        db_deal.pipedrive_title = deal.title
         logger.debug("Processing deal '%s' for user '%s'", deal.title, requester.username)
         db_deal.pipedrive_deal_company = deal.org_id.get('name')
         db_deal.pipedrive_deal_value = deal.value
@@ -97,7 +99,8 @@ def build_deal_content(deal, users, org_domain, pipe_client):
         content['users'].append({
             'name': pipe_user.name,
             'email': pipe_user.email,
-            'icon_url': pipe_user.icon_url
+            'icon_url': pipe_user.icon_url,
+            'url': 'https://{}.pipedrive.com/users/details/{}'.format(org_domain, pipe_user.id)
         })
         if deal.followers_count > 1:
             for follower in pipe_client.FollowerDeal.fetch_all(filter_id=deal.id):
@@ -106,7 +109,8 @@ def build_deal_content(deal, users, org_domain, pipe_client):
                     content['users'].append({
                         'name': pipe_user.name,
                         'email': pipe_user.email,
-                        'icon_url': pipe_user.icon_url
+                        'icon_url': pipe_user.icon_url,
+                        'url': 'https://{}.pipedrive.com/users/details/{}'.format(org_domain, follower.user_id)
                     })
     # activities
     if deal.done_activities_count > 0:
@@ -120,7 +124,7 @@ def build_deal_content(deal, users, org_domain, pipe_client):
                 }
                 if activity.assigned_to_user_id in users:
                     new_activity['user_name'] = users.get(activity.assigned_to_user_id).name
-                content['activities'].append(new_activity)
+                content['activities'].insert(0, new_activity)
     return content
 
 
