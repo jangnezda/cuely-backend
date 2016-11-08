@@ -50,7 +50,6 @@ def collect_deals(requester):
         )
         if not created:
             # compare timestamps and skip the deal if it hasn't been updated
-            logger.debug('%d %d', db_deal.last_updated_ts, parse_dt(deal.update_time).timestamp())
             if db_deal.last_updated_ts >= parse_dt(deal.update_time).timestamp():
                 logger.debug("Deal '%s' for user '%s' hasn't changed", deal.title, requester.username)
                 continue
