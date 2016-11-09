@@ -5,7 +5,7 @@ integration  naively translates timestamps to dates, therefore we try to access 
 import json
 from datetime import datetime, timezone
 from celery import shared_task, subtask
-from intercom import Event, Intercom, User, Admin, Company, Segment, Conversation, AuthenticationError
+from intercom import Event, Intercom, User, Admin, Company, Segment, Conversation, AuthenticationError, ResourceNotFound
 
 from dataimporter.models import Document
 from social.apps.django_app.default.models import UserSocialAuth
@@ -35,6 +35,10 @@ def collect_users(requester):
     """ Fetch all users for this account from Intercom """
     init_intercom(requester)
     for u in User.all():
+        if not u.name:
+            # empty/rubbish data, can happen with Intercom API
+            continue
+
         db_user, created = Document.objects.get_or_create(
             intercom_user_id=u.id,
             requester=requester,
@@ -96,7 +100,12 @@ def process_user(requester, user, db_user):
         db_user.save()
         return
 
-    content['conversations'] = process_conversations(user['id'], user['name'])
+    conversations = process_conversations(user['id'], user['name'])
+    # work around algolia 10k bytes limit
+    while len(json.dumps(conversations).encode('UTF-8')) > 9000:
+        conversations = conversations[:-1]
+
+    content['conversations'] = conversations
     db_user.intercom_content = json.dumps(content)
 
     # companies ... only use first one, add others when/if necessary
@@ -164,12 +173,16 @@ def process_conversations(user_id, user_name):
 
 
 def fetch_user(user_or_admin_id):
-    user = None
-    if isinstance(user_or_admin_id, int) or user_or_admin_id.isdigit():
-        user = Admin.find(id=user_or_admin_id)
-    else:
-        user = User.find(id=user_or_admin_id)
-    return {'id': user_or_admin_id, 'name': user.name, 'email': user.email}
+    try:
+        user = None
+        if isinstance(user_or_admin_id, int) or user_or_admin_id.isdigit():
+            user = Admin.find(id=user_or_admin_id)
+        else:
+            user = User.find(id=user_or_admin_id)
+        return {'id': user_or_admin_id, 'name': user.name, 'email': user.email}
+    except ResourceNotFound:
+        # probably trying to get user/admin that doesn't exist anymore
+        return {'id': user_or_admin_id, 'name': None, 'email': None}
 
 
 def init_intercom(user):

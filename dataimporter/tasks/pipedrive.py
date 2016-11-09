@@ -40,9 +40,16 @@ def collect_deals(requester):
     pipe_client = init_pipedrive_client(requester)
     stages = {s.id: s.name for s in pipe_client.Stage.fetch_all()}
     users = {u.id: u for u in pipe_client.User.fetch_all()}
+    # fallback domain
+    org_domain = None
 
     for deal in pipe_client.Deal.fetch_all():
-        org_domain = deal.org_id.get('cc_email', '').split('@')[0]
+        if deal.org_id:
+            org_domain = deal.org_id.get('cc_email', '').split('@')[0]
+        if not org_domain:
+            # cannot associate a deal to a company
+            logger.debug("Deal '%s' for user '%s' cannot be associated to a company", deal.title, requester.username)
+            continue
         db_deal, created = Document.objects.get_or_create(
             pipedrive_deal_id=deal.id,
             requester=requester,
