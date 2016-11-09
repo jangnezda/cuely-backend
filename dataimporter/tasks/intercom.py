@@ -6,6 +6,7 @@ import json
 import time
 from datetime import datetime, timezone
 from celery import shared_task, subtask
+from celery.task.control import inspect
 from intercom import Event, Intercom, User, Admin, Company, Segment, Conversation, AuthenticationError, ResourceNotFound
 
 from dataimporter.models import Document
@@ -27,8 +28,18 @@ def start_synchronization(user):
 @shared_task
 def update_synchronization():
     """ Run re-syncing of user's data in intercom. """
+    active_tasks = inspect().active()
+    active_users = []
+    for key, task_list in active_tasks.items():
+        for task in (task_list or []):
+            # unfortunately, celery inspect() returns arguments as string, so there has to be some hacky manipulation
+            if 'tasks.intercom' in task.get('name') and '<User: ' in task.get('args'):
+                active_users.append(task.get('args').split('<User: ')[1].split('>')[0])
+
     for us in UserSocialAuth.objects.filter(provider='intercom-apikeys'):
-        collect_users.delay(requester=us.user)
+        # check if the syncing isn't already running for a user
+        if us.user.username not in active_users:
+            collect_users.delay(requester=us.user)
 
 
 @shared_task
@@ -121,7 +132,11 @@ def process_user(requester, user, db_user):
     # segments
     segments = []
     for sid in user['segments']:
-        s = Segment.find(id=sid)
+        s = None
+        try:
+            s = Segment.find(id=sid)
+        except ResourceNotFound:
+            pass
         if s:
             segments.append(s.name)
     if segments:
