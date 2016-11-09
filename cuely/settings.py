@@ -183,11 +183,11 @@ CELERYBEAT_SCHEDULE = {
     },
     'sync-intercom': {
         'task': 'dataimporter.tasks.intercom.update_synchronization',
-        'schedule': timedelta(seconds=300),
+        'schedule': timedelta(seconds=600),
     },
     'sync-pipedrive': {
         'task': 'dataimporter.tasks.pipedrive.update_synchronization',
-        'schedule': timedelta(seconds=280),
+        'schedule': timedelta(seconds=590),
     },
 }
 

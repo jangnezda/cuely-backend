@@ -3,6 +3,7 @@ Intercom API integration. A note about date/time manipulation: python-intercom l
 integration  naively translates timestamps to dates, therefore we try to access the underlying data directly.
 """
 import json
+import time
 from datetime import datetime, timezone
 from celery import shared_task, subtask
 from intercom import Event, Intercom, User, Admin, Company, Segment, Conversation, AuthenticationError, ResourceNotFound
@@ -67,6 +68,8 @@ def collect_users(requester):
             'old_updated_ts': old_updated_ts
         }
         subtask(process_user).delay(requester, intercom_user, db_user)
+        # quick hack to avoid Intercom api rate limits
+        time.sleep(3)
 
 
 @shared_task
@@ -111,7 +114,7 @@ def process_user(requester, user, db_user):
     # companies ... only use first one, add others when/if necessary
     if user['companies']:
         c = Company.find(id=user['companies'][0])
-        if c:
+        if c and hasattr(c, 'name'):
             db_user.intercom_company = c.name
             db_user.intercom_plan = c.plan.get('name')
             db_user.intercom_monthly_spend = c.monthly_spend
