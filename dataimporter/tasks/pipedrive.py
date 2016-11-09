@@ -89,14 +89,17 @@ def build_deal_content(deal, users, org_domain, pipe_client):
         'activities': []
     }
     # contacts
-    content['contacts'].append({
-        'name': deal.person_id.get('name'),
-        'email': deal.person_id.get('email', [{}])[0].get('value') or None,
-        'url': 'https://{}.pipedrive.com/person/{}'.format(org_domain, deal.person_id.get('value'))
-    })
+    person_name = ''
+    if hasattr(deal, 'person_id') and deal.person_id:
+        person_name = deal.person_id.get('name')
+        content['contacts'].append({
+            'name': person_name,
+            'email': deal.person_id.get('email', [{}])[0].get('value') or None,
+            'url': 'https://{}.pipedrive.com/person/{}'.format(org_domain, deal.person_id.get('value'))
+        })
     if deal.participants_count > 1:
         for participant in pipe_client.Participant.fetch_all(filter_id=deal.id):
-            if participant.person.get('name') != deal.person_id.get('name'):
+            if participant.person.get('name') != person_name:
                 content['contacts'].append({
                     'name': participant.person.get('name'),
                     'email': participant.person.get('email', [{}])[0].get('value') or None,
