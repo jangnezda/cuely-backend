@@ -55,7 +55,7 @@ def collect_deals(requester):
             requester=requester,
             user_id=requester.id
         )
-        if not created:
+        if not created and db_deal.last_updated_ts:
             # compare timestamps and skip the deal if it hasn't been updated
             if db_deal.last_updated_ts >= parse_dt(deal.update_time).timestamp():
                 logger.debug("Deal '%s' for user '%s' hasn't changed", deal.title, requester.username)
@@ -65,7 +65,7 @@ def collect_deals(requester):
         db_deal.secondary_keywords = PIPEDRIVE_KEYWORDS['secondary']
         db_deal.pipedrive_title = deal.title
         logger.debug("Processing deal '%s' for user '%s'", deal.title, requester.username)
-        db_deal.pipedrive_deal_company = deal.org_id.get('name')
+        db_deal.pipedrive_deal_company = deal.org_id.get('name') if deal.org_id else None
         db_deal.pipedrive_deal_value = deal.value
         db_deal.pipedrive_deal_currency = deal.currency
         db_deal.pipedrive_deal_status = deal.status
