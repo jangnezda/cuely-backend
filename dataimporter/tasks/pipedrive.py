@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from dateutil.parser import parse as parse_dt
 from celery import shared_task
 
+from dataimporter.task_util import should_sync
 from dataimporter.models import Document
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
@@ -22,7 +23,10 @@ PIPEDRIVE_KEYWORDS = {
 
 def start_synchronization(user):
     """ Run initial syncing of deals data in pipedrive. """
-    collect_deals.delay(requester=user)
+    if should_sync(user, 'pipedrive-apikeys', 'tasks.pipedrive'):
+        collect_deals.delay(requester=user)
+    else:
+        logger.info("Pipedrive api key for user '%s' already in use, skipping sync ...", user.username)
 
 
 @shared_task
@@ -32,7 +36,7 @@ def update_synchronization():
     Should be run periodically to keep the data fresh in our db.
     """
     for us in UserSocialAuth.objects.filter(provider='pipedrive-apikeys'):
-        collect_deals.delay(requester=us.user)
+        start_synchronization(user=us.user)
 
 
 @shared_task

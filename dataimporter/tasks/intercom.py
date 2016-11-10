@@ -6,10 +6,10 @@ import json
 import time
 from datetime import datetime, timezone
 from celery import shared_task, subtask
-from celery.task.control import inspect
 from intercom import Event, Intercom, User, Admin, Company, Segment, Conversation, AuthenticationError, ResourceNotFound
 
 from dataimporter.models import Document
+from dataimporter.task_util import should_sync
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
@@ -22,24 +22,17 @@ INTERCOM_KEYWORDS = {
 
 def start_synchronization(user):
     """ Run initial syncing of user's data in intercom. """
-    collect_users.delay(requester=user)
+    if should_sync(user, 'intercom-apikeys', 'tasks.intercom'):
+        collect_users.delay(requester=user)
+    else:
+        logger.info("Intercom api key for user '%s' already in use, skipping sync ...", user.username)
 
 
 @shared_task
 def update_synchronization():
     """ Run re-syncing of user's data in intercom. """
-    active_tasks = inspect().active()
-    active_users = []
-    for key, task_list in active_tasks.items():
-        for task in (task_list or []):
-            # unfortunately, celery inspect() returns arguments as string, so there has to be some hacky manipulation
-            if 'tasks.intercom' in task.get('name') and '<User: ' in task.get('args'):
-                active_users.append(task.get('args').split('<User: ')[1].split('>')[0])
-
     for us in UserSocialAuth.objects.filter(provider='intercom-apikeys'):
-        # check if the syncing isn't already running for a user
-        if us.user.username not in active_users:
-            collect_users.delay(requester=us.user)
+        start_synchronization(user=us.user)
 
 
 @shared_task
