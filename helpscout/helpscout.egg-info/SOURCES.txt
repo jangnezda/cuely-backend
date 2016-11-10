@@ -1,0 +1,9 @@
+setup.py
+helpscout/__init__.py
+helpscout/client.py
+helpscout/models.py
+helpscout.egg-info/PKG-INFO
+helpscout.egg-info/SOURCES.txt
+helpscout.egg-info/dependency_links.txt
+helpscout.egg-info/requires.txt
+helpscout.egg-info/top_level.txt
