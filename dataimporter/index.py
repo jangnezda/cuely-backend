@@ -11,11 +11,13 @@ class DocumentIndex(AlgoliaIndex):
             'unordered(secondary_keywords)',
             'unordered(title)',
             'unordered(intercom_title)',
+            'unordered(pipedrive_title)',
             'owner_display_name',
             'modifier_display_name',
             'path',
             'content',
-            'intercom_content'
+            'intercom_content',
+            'pipedrive_content'
         ],
         # adjust ranking formula
         'ranking': [
@@ -61,5 +63,15 @@ class DocumentIndex(AlgoliaIndex):
         'intercom_segments',
         'intercom_plan',
         'intercom_monthly_spend',
-        'intercom_conversation_open'
+        'intercom_company',
+
+        # Pipedrive
+        'pipedrive_deal_id',
+        'pipedrive_title',
+        'pipedrive_deal_company',
+        'pipedrive_deal_value',
+        'pipedrive_deal_currency',
+        'pipedrive_deal_status',
+        'pipedrive_deal_stage',
+        'pipedrive_content'
     )

@@ -8,13 +8,15 @@ from django.views.decorators.csrf import csrf_exempt
 from dataimporter.models import Document, UserAttributes
 from dataimporter.tasks.gdrive import start_synchronization as gdrive_sync
 from dataimporter.tasks.intercom import start_synchronization as intercom_sync
+from dataimporter.tasks.pipedrive import start_synchronization as pipedrive_sync
 
 import logging
 logger = logging.getLogger(__name__)
 sync_mapping = {
     'google-oauth2': gdrive_sync,
     'intercom-oauth': intercom_sync,
-    'intercom-apikeys': intercom_sync
+    'intercom-apikeys': intercom_sync,
+    'pipedrive-apikeys': pipedrive_sync
 }
 
 
@@ -29,6 +31,10 @@ def index(request):
 
 def intercom_apikeys(request):
     return render(request, 'frontend/intercom_apikeys.html', {})
+
+
+def pipedrive_apikeys(request):
+    return render(request, 'frontend/pipedrive_apikeys.html', {})
 
 
 @require_POST
@@ -50,7 +56,14 @@ def sync_status(request):
     if user.is_authenticated:
         provider = request.GET.get('provider', 'google-oauth2').lower()
         intercom = 'intercom' in provider
-        documents_count = Document.objects.filter(requester=user, document_id__isnull=intercom).count()
+        pipedrive = 'pipedrive' in provider
+        gdrive = 'google' in provider
+        documents_count = Document.objects.filter(
+            requester=user,
+            document_id__isnull=not gdrive,
+            intercom_user_id__isnull=not intercom,
+            pipedrive_deal_id__isnull=not pipedrive
+        ).count()
         documents_ready_count = Document.objects.filter(
             requester=user, document_id__isnull=intercom, download_status=Document.READY).count()
         return JsonResponse({

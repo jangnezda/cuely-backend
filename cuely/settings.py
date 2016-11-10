@@ -117,6 +117,7 @@ AUTHENTICATION_BACKENDS = (
     'social.backends.google.GoogleOAuth2',
     'dataimporter.auth.IntercomOauth',
     'dataimporter.auth.IntercomApiKeysAuth',
+    'dataimporter.auth.PipedriveApiKeysAuth',
     'django.contrib.auth.backends.ModelBackend',
 )
 
@@ -134,6 +135,8 @@ SOCIAL_AUTH_INTERCOM_OAUTH_KEY = os.environ['INTERCOM_API_CLIENT_ID']
 SOCIAL_AUTH_INTERCOM_OAUTH_SECRET = os.environ['INTERCOM_API_CLIENT_SECRET']
 
 SOCIAL_AUTH_INTERCOM_APIKEYS_FORM_URL = '/home/intercom_apikeys/'
+
+SOCIAL_AUTH_PIPEDRIVE_APIKEYS_FORM_URL = '/home/pipedrive_apikeys/'
 
 SOCIAL_AUTH_PIPELINE = (
     'social.pipeline.social_auth.social_details',
@@ -159,6 +162,7 @@ USE_L10N = True
 
 USE_TZ = True
 
+SESSION_COOKIE_AGE = 15552000 # 6 months
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
@@ -173,9 +177,17 @@ CELERY_BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 CELERY_RESULT_BACKEND = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/1'
 CELERYBEAT_SCHEDULE = {
-    'sync-every-60-seconds': {
+    'sync-gdrive': {
         'task': 'dataimporter.tasks.gdrive.update_synchronization',
         'schedule': timedelta(seconds=60),
+    },
+    'sync-intercom': {
+        'task': 'dataimporter.tasks.intercom.update_synchronization',
+        'schedule': timedelta(seconds=600),
+    },
+    'sync-pipedrive': {
+        'task': 'dataimporter.tasks.pipedrive.update_synchronization',
+        'schedule': timedelta(seconds=590),
     },
 }
 

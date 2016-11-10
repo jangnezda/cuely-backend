@@ -40,10 +40,18 @@ class Document(models.Model):
     intercom_avatar_link = models.CharField(max_length=500, blank=True, null=True)
     intercom_session_count = models.IntegerField(null=True)
     intercom_segments = models.CharField(max_length=500, blank=True, null=True)
+    intercom_company = models.CharField(max_length=100, blank=True, null=True)
     intercom_plan = models.CharField(max_length=100, blank=True, null=True)
     intercom_monthly_spend = models.IntegerField(null=True)
     intercom_content = models.TextField(blank=True, null=True)
-    intercom_conversation_open = models.BooleanField(blank=False, null=False, default=False)
+    pipedrive_deal_id = models.CharField(max_length=50, blank=True, null=True)
+    pipedrive_title = models.CharField(max_length=500, blank=True, null=True)
+    pipedrive_deal_company = models.CharField(max_length=100, blank=True, null=True)
+    pipedrive_deal_value = models.IntegerField(null=True)
+    pipedrive_deal_currency = models.CharField(max_length=10, blank=True, null=True)
+    pipedrive_deal_status = models.CharField(max_length=50, blank=True, null=True)
+    pipedrive_deal_stage = models.CharField(max_length=100, blank=True, null=True)
+    pipedrive_content = models.TextField(blank=True, null=True)
 
     def __str__(self):
         if self.title:

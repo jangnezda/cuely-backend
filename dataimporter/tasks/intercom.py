@@ -3,11 +3,14 @@ Intercom API integration. A note about date/time manipulation: python-intercom l
 integration  naively translates timestamps to dates, therefore we try to access the underlying data directly.
 """
 import json
+import time
 from datetime import datetime, timezone
 from celery import shared_task, subtask
-from intercom import Event, Intercom, User, Admin, Company, Segment, Conversation, AuthenticationError
+from intercom import Event, Intercom, User, Admin, Company, Segment, Conversation, AuthenticationError, ResourceNotFound
 
 from dataimporter.models import Document
+from dataimporter.task_util import should_sync
+from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
 
@@ -19,7 +22,17 @@ INTERCOM_KEYWORDS = {
 
 def start_synchronization(user):
     """ Run initial syncing of user's data in intercom. """
-    collect_users.delay(requester=user)
+    if should_sync(user, 'intercom-apikeys', 'tasks.intercom'):
+        collect_users.delay(requester=user)
+    else:
+        logger.info("Intercom api key for user '%s' already in use, skipping sync ...", user.username)
+
+
+@shared_task
+def update_synchronization():
+    """ Run re-syncing of user's data in intercom. """
+    for us in UserSocialAuth.objects.filter(provider='intercom-apikeys'):
+        start_synchronization(user=us.user)
 
 
 @shared_task
@@ -27,14 +40,21 @@ def collect_users(requester):
     """ Fetch all users for this account from Intercom """
     init_intercom(requester)
     for u in User.all():
+        if not u.name:
+            # empty/rubbish data, can happen with Intercom API
+            continue
+
         db_user, created = Document.objects.get_or_create(
             intercom_user_id=u.id,
             requester=requester,
             user_id=requester.id
         )
+        old_updated_ts = None
+        if not created:
+            old_updated_ts = db_user.last_updated_ts
         db_user.intercom_email = u.email
         db_user.intercom_title = 'User: {}'.format(u.name)
-        db_user.last_updated_ts = u.__dict__.get('last_request_at', u.__dict__.get('updated_at'))
+        db_user.last_updated_ts = u.__dict__.get('last_request_at') or u.__dict__.get('updated_at')
         db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
         db_user.webview_link = 'https://app.intercom.io/a/apps/{}/users/{}'.format(u.app_id, u.id)
         db_user.primary_keywords = INTERCOM_KEYWORDS['primary']
@@ -48,9 +68,12 @@ def collect_users(requester):
             'id': u.id,
             'name': u.name,
             'segments': list(map(lambda x: x.id, u.segments)),
-            'companies': list(map(lambda x: x.id, u.companies))
+            'companies': list(map(lambda x: x.id, u.companies)),
+            'old_updated_ts': old_updated_ts
         }
         subtask(process_user).delay(requester, intercom_user, db_user)
+        # quick hack to avoid Intercom api rate limits
+        time.sleep(3)
 
 
 @shared_task
@@ -60,36 +83,58 @@ def process_user(requester, user, db_user):
     db_user.download_status = Document.PROCESSING
     db_user.save()
 
-    print ("Processing user '{}' with data: {}".format(user['name'], user))
-    # companies ... only use first one, add others when/if necessary
-    if user['companies']:
-        c = Company.find(id=user['companies'][0])
-        if c:
-            db_user.intercom_plan = c.plan.get('name')
-            db_user.intercom_monthly_spend = c.monthly_spend
-    # segments
-    segments = []
-    for sid in user['segments']:
-        s = Segment.find(id=sid)
-        if s:
-            segments.append(s.name)
-    if segments:
-        db_user.intercom_segments = ', '.join(segments)
+    logger.info("Processing user '%s' with data: %s", user['name'], user)
     # build json for content -> events and conversations
     content = {
         'events': [],
         'conversations': []
     }
     for e in Event.find(type='user', intercom_user_id=user['id'], per_page=10).events:
-        content['events'].insert(0, {
+        content['events'].append({
             'name': e['event_name'],
             'timestamp': e['created_at']
         })
+    if len(content['events']) > 0:
+        db_user.last_updated_ts = max(db_user.last_updated_ts, content['events'][0].get('timestamp', 0))
+        db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
 
-    conversations, conversation_open = process_conversations(user['id'], user['name'])
+    # check if the last event timestamp/seen timestamp is different than old one
+    old_updated_ts = user.get('old_updated_ts')
+    if old_updated_ts and old_updated_ts >= db_user.last_updated_ts:
+        logger.info("User '%s' seems unchanged, skipping further processing", user['name'])
+        db_user.last_updated_ts = old_updated_ts
+        db_user.download_status = Document.READY
+        db_user.save()
+        return
+
+    conversations = process_conversations(user['id'], user['name'])
+    # work around algolia 10k bytes limit
+    while len(json.dumps(conversations).encode('UTF-8')) > 9000:
+        conversations = conversations[:-1]
+
     content['conversations'] = conversations
     db_user.intercom_content = json.dumps(content)
-    db_user.intercom_conversation_open = conversation_open
+
+    # companies ... only use first one, add others when/if necessary
+    if user['companies']:
+        c = Company.find(id=user['companies'][0])
+        if c and hasattr(c, 'name'):
+            db_user.intercom_company = c.name
+            db_user.intercom_plan = c.plan.get('name') if c.plan else None
+            db_user.intercom_monthly_spend = c.monthly_spend
+    # segments
+    segments = []
+    for sid in user['segments']:
+        s = None
+        try:
+            s = Segment.find(id=sid)
+        except ResourceNotFound:
+            pass
+        if s:
+            segments.append(s.name)
+    if segments:
+        db_user.intercom_segments = ', '.join(segments)
+
     db_user.last_synced = _get_utc_timestamp()
     db_user.download_status = Document.READY
     db_user.save()
@@ -97,7 +142,6 @@ def process_user(requester, user, db_user):
 
 def process_conversations(user_id, user_name):
     result = []
-    conversation_open = False
     # cached participants
     users = {user_id: user_name}
 
@@ -121,31 +165,35 @@ def process_conversations(user_id, user_name):
             }]
             parts = Conversation.find(id=conversation['id'])
             for part in parts.conversation_parts:
-                items.append({
+                items.insert(0, {
                     'timestamp': part.__dict__['created_at'],
                     'author': _find_user(part.author.id),
+                    'author_id': part.author.id,
                     'body': part.body
                 })
             result.append({
                 'subject': conversation.get('conversation_message', {}).get('subject', ''),
+                'open': conversation.get('open', False),
                 'items': items
             })
-            if conversation.get('open', False):
-                conversation_open = True
     except AuthenticationError:
         # conversations are only available on paid accounts that have 'Engage' plan
         # ... or in other words, has to be an account that has enabled in-app messaging
-        print ("Could not fetch conversations for user '{}' with id: {}".format(user_name, user_id))
-    return (result, conversation_open)
+        logger.warn("Could not fetch conversations for user '%s' with id: %s", user_name, user_id)
+    return result
 
 
 def fetch_user(user_or_admin_id):
-    user = None
-    if isinstance(user_or_admin_id, int) or user_or_admin_id.isdigit():
-        user = Admin.find(id=user_or_admin_id)
-    else:
-        user = User.find(id=user_or_admin_id)
-    return {'id': user_or_admin_id, 'name': user.name, 'email': user.email}
+    try:
+        user = None
+        if isinstance(user_or_admin_id, int) or user_or_admin_id.isdigit():
+            user = Admin.find(id=user_or_admin_id)
+        else:
+            user = User.find(id=user_or_admin_id)
+        return {'id': user_or_admin_id, 'name': user.name, 'email': user.email}
+    except ResourceNotFound:
+        # probably trying to get user/admin that doesn't exist anymore
+        return {'id': user_or_admin_id, 'name': None, 'email': None}
 
 
 def init_intercom(user):

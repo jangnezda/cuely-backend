@@ -104,8 +104,9 @@ def update_synchronization():
     """
     logger.debug("Update synchronizations started")
     for sa in SocialAttributes.objects.filter(start_page_token__isnull=False):
-        access_token, refresh_token = get_google_tokens(sa.user)
-        subtask(sync_gdrive_changes).delay(sa.user, access_token, refresh_token, sa.start_page_token)
+        if sa.user.social_auth.filter(provider='google-oauth2').first():
+            access_token, refresh_token = get_google_tokens(sa.user)
+            subtask(sync_gdrive_changes).delay(sa.user, access_token, refresh_token, sa.start_page_token)
 
 
 @shared_task
