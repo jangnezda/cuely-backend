@@ -25,5 +25,6 @@ urlpatterns = [
     url(r'^home/', include('frontend.urls')),
     url(r'^accounts/profile/?$', RedirectView.as_view(url='/home/')),
     url(r'^accounts/', include('registration.backends.simple.urls')),
-    url('', include('social.apps.django_app.urls', namespace='social'))
+    url('', include('social.apps.django_app.urls', namespace='social')),
+    url('', include('django.contrib.auth.urls'))
 ]

@@ -15,6 +15,10 @@ services:
       - MYSQL_USER=root
       - MYSQL_PASSWORD=A1PMCIhlu1AB
       - SEGMENT_KEY=CzbltQu3JSHIP6co82fYPTfBLDrHsCIC
+      - EMAIL_HOST=email-smtp.eu-west-1.amazonaws.com
+      - EMAIL_PORT=25
+      - EMAIL_HOST_USER=AKIAJSIFJVXZUWSXVQMA
+      - EMAIL_HOST_PASSWORD=AoZVItTzoqUeUiB9eBjR82W9uKCrIltvSxgZ/CeCtpKv
 
   worker:
     image: pipetop/cuely-backend
