@@ -197,7 +197,8 @@ ALGOLIA = {
     'API_KEY': os.environ['ALGOLIA_API_KEY']
 }
 
-EMAIL_BACKEND = 'django.core.mail.backends.{}.EmailBackend'.format('console' if DEBUG else 'smtp')
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
 EMAIL_PORT = os.environ.get('EMAIL_PORT')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
