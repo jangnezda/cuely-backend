@@ -54,7 +54,8 @@ def collect_users(requester):
             old_updated_ts = db_user.last_updated_ts
         db_user.intercom_email = u.email
         db_user.intercom_title = 'User: {}'.format(u.name)
-        db_user.last_updated_ts = u.__dict__.get('last_request_at') or u.__dict__.get('updated_at')
+        new_updated_ts = u.__dict__.get('last_request_at') or u.__dict__.get('updated_at')
+        db_user.last_updated_ts = new_updated_ts if new_updated_ts > old_updated_ts else old_updated_ts
         db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
         db_user.webview_link = 'https://app.intercom.io/a/apps/{}/users/{}'.format(u.app_id, u.id)
         db_user.primary_keywords = INTERCOM_KEYWORDS['primary']
