@@ -6,3 +6,4 @@ __all__ = ['Client']
 USER_AGENT = 'Helpscout Python API Wrapper %s' % __version__
 
 from helpscout.client import Client
+from helpscout.clientdocs import ClientDocs

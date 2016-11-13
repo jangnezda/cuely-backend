@@ -1,15 +1,24 @@
-class Attachment:
+class Article:
     def __init__(self):
         self.id = None
-        self.mimetype = None
-        self.filename = None
-        self.size = None
-        self.width = None
-        self.height = None
-        self.url = None
+        self.name = None
+        self.publicurl = None
+        self.updatedat = None
+        self.createdby = None
+        self.updatedby = None
+        self.text = None
+        self.keywords = None
+        self.publicurl = None
 
-    def isimage(self):
-        return self.mimetype is not None and self.mimetype.startwith('image')
+class Collection:
+    def __init__(self):
+        self.id = None
+        self.name = None
+
+class Category:
+    def __init__(self):
+        self.id = None
+        self.name = None
 
 class Conversation(object):
     def __init__(self):
@@ -137,13 +146,13 @@ class User:
     def __init__(self):
         self.id = None
         self.firstname = None
-        self.lastname = None
         self.email = None
         self.role = None
         self.timezone = None
         self.photourl = None
         self.createdat = None
         self.modifiedat = None
+
 
 
 class Address:
