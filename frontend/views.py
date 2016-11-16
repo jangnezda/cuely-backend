@@ -65,11 +65,16 @@ def sync_status(request):
             pipedrive_deal_id__isnull=not pipedrive
         ).count()
         documents_ready_count = Document.objects.filter(
-            requester=user, document_id__isnull=intercom, download_status=Document.READY).count()
+            requester=user,
+            document_id__isnull=not gdrive,
+            intercom_user_id__isnull=not intercom,
+            pipedrive_deal_id__isnull=not pipedrive,
+            download_status=Document.READY).count()
         return JsonResponse({
             "documents": documents_count,
             "ready": documents_ready_count,
-            "in_progress": documents_count - documents_ready_count > 0
+            "in_progress": documents_count - documents_ready_count > 0,
+            "has_started": documents_count > 0
         })
     else:
         return HttpResponseForbidden()
