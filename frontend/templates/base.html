@@ -5,7 +5,7 @@
 <html lang="en">
 
 <head>
-    {% bootstrap_css %}
+    <link rel="stylesheet" type="text/css" href="{% static 'frontend/bootstrap.min.css' %}" />
     <link rel="stylesheet" href="{{ STATIC_URL }}style.css" />
     <title>{% block title %}Cuely prototype backend{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" type="text/css">
@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'frontend/bootstrap-social.css' %}" />
     <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-    {% bootstrap_javascript %}
+    <script src="{% static 'frontend' %}/bootstrap.min.js"></script>
 </head>
 
 <body>

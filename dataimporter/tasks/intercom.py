@@ -49,13 +49,13 @@ def collect_users(requester):
             requester=requester,
             user_id=requester.id
         )
-        old_updated_ts = None
-        if not created:
-            old_updated_ts = db_user.last_updated_ts
+        new_updated_ts = u.__dict__.get('last_request_at') or u.__dict__.get('updated_at')
+        if not created and db_user.last_updated_ts:
+            new_updated_ts = db_user.last_updated_ts if db_user.last_updated_ts > new_updated_ts else new_updated_ts
+        db_user.last_updated_ts = new_updated_ts
+        db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
         db_user.intercom_email = u.email
         db_user.intercom_title = 'User: {}'.format(u.name)
-        db_user.last_updated_ts = u.__dict__.get('last_request_at') or u.__dict__.get('updated_at')
-        db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
         db_user.webview_link = 'https://app.intercom.io/a/apps/{}/users/{}'.format(u.app_id, u.id)
         db_user.primary_keywords = INTERCOM_KEYWORDS['primary']
         db_user.secondary_keywords = INTERCOM_KEYWORDS['secondary']
@@ -66,10 +66,11 @@ def collect_users(requester):
         # therefore, let's just copy the data we're interested in
         intercom_user = {
             'id': u.id,
+            'app_id': u.app_id,
             'name': u.name,
             'segments': list(map(lambda x: x.id, u.segments)),
             'companies': list(map(lambda x: x.id, u.companies)),
-            'old_updated_ts': old_updated_ts
+            'updated_ts': new_updated_ts
         }
         subtask(process_user).delay(requester, intercom_user, db_user)
         # quick hack to avoid Intercom api rate limits
@@ -99,10 +100,9 @@ def process_user(requester, user, db_user):
         db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
 
     # check if the last event timestamp/seen timestamp is different than old one
-    old_updated_ts = user.get('old_updated_ts')
-    if old_updated_ts and old_updated_ts >= db_user.last_updated_ts:
+    user_updated_ts = user.get('updated_ts')
+    if user_updated_ts and user_updated_ts >= db_user.last_updated_ts:
         logger.info("User '%s' seems unchanged, skipping further processing", user['name'])
-        db_user.last_updated_ts = old_updated_ts
         db_user.download_status = Document.READY
         db_user.save()
         return
@@ -131,7 +131,7 @@ def process_user(requester, user, db_user):
         except ResourceNotFound:
             pass
         if s:
-            segments.append(s.name)
+            segments.append('{}::{}/{}'.format(s.name, user['app_id'], sid))
     if segments:
         db_user.intercom_segments = ', '.join(segments)
 
