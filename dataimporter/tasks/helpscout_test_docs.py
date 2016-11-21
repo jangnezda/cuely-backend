@@ -48,4 +48,4 @@ def get_users(article, client):
 
 	return users
 
-print(get_articles(client, clientdocs))
+# print(get_articles(client, clientdocs))

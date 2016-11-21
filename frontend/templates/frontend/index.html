@@ -39,6 +39,16 @@
         <img src="{% static "frontend/pipedrive-logo.png" %}" style="padding: 3px">Pipedrive integration is ready
       </a>
     {% endif %}
+
+    {% if "helpscout-apikeys" not in backends %}
+      <a class="btn btn-block btn-social btn-reddit" href="/login/helpscout-apikeys">
+        <img src="{% static "frontend/helpscout-logo.png" %}" style="padding: 3px">Add Helpscout integration
+      </a>
+    {% else %}
+      <a class="btn disabled btn-block btn-social btn-reddit" href="#">
+        <img src="{% static "frontend/helpscout-logo.png" %}" style="padding: 3px">Helpscout integration is ready
+      </a>
+    {% endif %}
   </div>
 </div>
 {% else %}

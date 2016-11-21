@@ -4,6 +4,7 @@ import os
 
 class DocumentIndex(AlgoliaIndex):
     index_name = os.environ["ALGOLIA_INDEX_NAME"]
+    should_index = 'should_sync'
     settings = {
         # list of attributes that are used for searching
         'attributesToIndex': [
@@ -12,21 +13,27 @@ class DocumentIndex(AlgoliaIndex):
             'unordered(title)',
             'unordered(intercom_title)',
             'unordered(pipedrive_title)',
+            'unordered(helpscout_title)',
             'owner_display_name',
             'modifier_display_name',
             'path',
+            'intercom_company',
+            'intercom_email',
+            'helpscout_emails',
             'content',
             'intercom_content',
-            'pipedrive_content'
+            'pipedrive_content',
+            'helpscout_content',
+            'intercom_segments'
         ],
         # adjust ranking formula
         'ranking': [
             'typo',
-            'filters',
             'proximity',
             'exact',
-            'attribute',
+            'filters',
             'desc(last_updated_ts)',
+            'attribute',
             'words'
         ]
     }
@@ -73,5 +80,18 @@ class DocumentIndex(AlgoliaIndex):
         'pipedrive_deal_currency',
         'pipedrive_deal_status',
         'pipedrive_deal_stage',
-        'pipedrive_content'
+        'pipedrive_content',
+
+        # Helpscout
+        'helpscout_customer_id',
+        'helpscout_title',
+        'helpscout_name',
+        'helpscout_company',
+        'helpscout_emails',
+        'helpscout_mailbox',
+        'helpscout_mailbox_id',
+        'helpscout_folder',
+        'helpscout_status',
+        'helpscout_assigned',
+        'helpscout_content'
     )

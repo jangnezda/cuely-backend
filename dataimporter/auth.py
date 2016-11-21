@@ -94,3 +94,28 @@ class PipedriveApiKeysAuth(LegacyAuth):
         }
         kwargs.update({'response': user_data, 'backend': self})
         return self.strategy.authenticate(*args, **kwargs)
+
+
+class HelpscoutApiKeysAuth(LegacyAuth):
+    """ Authentication using Helpscout Api key. """
+    name = 'helpscout-apikeys'
+    ID_KEY = 'username'
+    EXTRA_DATA = ['api_key', 'email', 'name']
+
+    def auth_complete(self, *args, **kwargs):
+        """Completes loging process, must return user instance"""
+        logger.debug("auth_complete: %s %s", self.data, kwargs)
+        api_key = self.data.get('api_key')
+        if not api_key:
+            raise AuthMissingParameter(self, 'api_key')
+        django_user = kwargs.get('user')
+        if not django_user:
+            raise AuthException(self, 'Could not get authenticated user, please login first')
+        user_data = {
+            'username': django_user.username,
+            'email': django_user.email,
+            'name': django_user.first_name + ' ' + django_user.last_name,
+            'api_key': api_key.strip()
+        }
+        kwargs.update({'response': user_data, 'backend': self})
+        return self.strategy.authenticate(*args, **kwargs)

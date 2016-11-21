@@ -118,6 +118,7 @@ AUTHENTICATION_BACKENDS = (
     'dataimporter.auth.IntercomOauth',
     'dataimporter.auth.IntercomApiKeysAuth',
     'dataimporter.auth.PipedriveApiKeysAuth',
+    'dataimporter.auth.HelpscoutApiKeysAuth',
     'django.contrib.auth.backends.ModelBackend',
 )
 
@@ -137,6 +138,8 @@ SOCIAL_AUTH_INTERCOM_OAUTH_SECRET = os.environ['INTERCOM_API_CLIENT_SECRET']
 SOCIAL_AUTH_INTERCOM_APIKEYS_FORM_URL = '/home/intercom_apikeys/'
 
 SOCIAL_AUTH_PIPEDRIVE_APIKEYS_FORM_URL = '/home/pipedrive_apikeys/'
+
+SOCIAL_AUTH_HELPSCOUT_APIKEYS_FORM_URL = '/home/helpscout_apikeys/'
 
 SOCIAL_AUTH_PIPELINE = (
     'social.pipeline.social_auth.social_details',
@@ -189,6 +192,10 @@ CELERYBEAT_SCHEDULE = {
         'task': 'dataimporter.tasks.pipedrive.update_synchronization',
         'schedule': timedelta(seconds=590),
     },
+    'sync-helpscout': {
+        'task': 'dataimporter.tasks.help_scout.update_synchronization',
+        'schedule': timedelta(seconds=30),
+    }
 }
 
 # Algolia setup

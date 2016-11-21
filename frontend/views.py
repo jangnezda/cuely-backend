@@ -9,6 +9,7 @@ from dataimporter.models import Document, UserAttributes
 from dataimporter.tasks.gdrive import start_synchronization as gdrive_sync
 from dataimporter.tasks.intercom import start_synchronization as intercom_sync
 from dataimporter.tasks.pipedrive import start_synchronization as pipedrive_sync
+from dataimporter.tasks.help_scout import start_synchronization as helpscout_sync
 
 import logging
 logger = logging.getLogger(__name__)
@@ -16,7 +17,8 @@ sync_mapping = {
     'google-oauth2': gdrive_sync,
     'intercom-oauth': intercom_sync,
     'intercom-apikeys': intercom_sync,
-    'pipedrive-apikeys': pipedrive_sync
+    'pipedrive-apikeys': pipedrive_sync,
+    'helpscout-apikeys': helpscout_sync
 }
 
 
@@ -37,9 +39,19 @@ def pipedrive_apikeys(request):
     return render(request, 'frontend/pipedrive_apikeys.html', {})
 
 
+def helpscout_apikeys(request):
+    return render(request, 'frontend/helpscout_apikeys.html', {})
+
+
 @require_POST
 def start_synchronization(request):
     if request.user.is_authenticated:
+        # if google oauth, then remove segment flag to force segment re-identify
+        ua = get_or_create_user_attributes(request.user)
+        if ua.segment_identify:
+            ua.segment_identify = False
+            ua.save()
+        
         provider = request.GET.get('provider', 'google-oauth2').lower()
         if not provider:
             return HttpResponseBadRequest("Missing 'provider' parameter")
@@ -58,17 +70,20 @@ def sync_status(request):
         intercom = 'intercom' in provider
         pipedrive = 'pipedrive' in provider
         gdrive = 'google' in provider
+        helpscout = 'helpscout' in provider
         documents_count = Document.objects.filter(
             requester=user,
             document_id__isnull=not gdrive,
             intercom_user_id__isnull=not intercom,
-            pipedrive_deal_id__isnull=not pipedrive
+            pipedrive_deal_id__isnull=not pipedrive,
+            helpscout_customer_id__isnull=not helpscout
         ).count()
         documents_ready_count = Document.objects.filter(
             requester=user,
             document_id__isnull=not gdrive,
             intercom_user_id__isnull=not intercom,
             pipedrive_deal_id__isnull=not pipedrive,
+            helpscout_customer_id__isnull=not helpscout,
             download_status=Document.READY).count()
         return JsonResponse({
             "documents": documents_count,
@@ -82,14 +97,7 @@ def sync_status(request):
 
 def get_algolia_key(request):
     if request.user.is_authenticated:
-        try:
-            ua = request.user.userattributes
-        except UserAttributes.DoesNotExist:
-            ua = UserAttributes()
-            ua.segment_identify = False
-            ua.user = request.user
-            ua.save()
-
+        ua = get_or_create_user_attributes(request.user)
         return JsonResponse({
             'userid': request.user.id,
             'username': request.user.username,
@@ -102,6 +110,18 @@ def get_algolia_key(request):
         })
     else:
         return HttpResponseForbidden()
+
+
+def get_or_create_user_attributes(user):
+    ua = None
+    try:
+        ua = user.userattributes
+    except UserAttributes.DoesNotExist:
+        ua = UserAttributes()
+        ua.segment_identify = False
+        ua.user = request.user
+        ua.save()
+    return ua
 
 
 @require_POST

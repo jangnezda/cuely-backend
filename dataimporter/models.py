@@ -52,6 +52,17 @@ class Document(models.Model):
     pipedrive_deal_status = models.CharField(max_length=50, blank=True, null=True)
     pipedrive_deal_stage = models.CharField(max_length=100, blank=True, null=True)
     pipedrive_content = models.TextField(blank=True, null=True)
+    helpscout_customer_id = models.CharField(max_length=50, blank=True, null=True)
+    helpscout_title = models.CharField(max_length=500, blank=True, null=True)
+    helpscout_name = models.CharField(max_length=100, blank=True, null=True)
+    helpscout_company = models.CharField(max_length=100, blank=True, null=True)
+    helpscout_emails = models.CharField(max_length=500, blank=True, null=True)
+    helpscout_mailbox = models.CharField(max_length=100, blank=True, null=True)
+    helpscout_mailbox_id = models.CharField(max_length=50, blank=True, null=True)
+    helpscout_folder = models.CharField(max_length=100, blank=True, null=True)
+    helpscout_status = models.CharField(max_length=50, blank=True, null=True)
+    helpscout_assigned = models.BooleanField(blank=False, null=False, default=False)
+    helpscout_content = models.TextField(blank=True, null=True)
 
     def __str__(self):
         if self.title:
@@ -62,6 +73,10 @@ class Document(models.Model):
     def resync(self):
         self.content = None
         self.download_status = Document.PENDING
+
+    def should_sync(self):
+        """ Don't sync to Algolia for processing docs/items """
+        return self.download_status != Document.PROCESSING
 
 
 class SocialAttributes(models.Model):

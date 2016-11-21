@@ -10,5 +10,6 @@ urlpatterns = [
     url(r'intercom_hook/?', views.intercom_callback),
     url(r'intercom_apikeys/?', views.intercom_apikeys),
     url(r'pipedrive_apikeys/?', views.pipedrive_apikeys),
+    url(r'helpscout_apikeys/?', views.helpscout_apikeys),
     url(r'', views.index, name='index'),
 ]
