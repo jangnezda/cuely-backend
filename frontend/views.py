@@ -51,7 +51,7 @@ def start_synchronization(request):
         if ua.segment_identify:
             ua.segment_identify = False
             ua.save()
-        
+
         provider = request.GET.get('provider', 'google-oauth2').lower()
         if not provider:
             return HttpResponseBadRequest("Missing 'provider' parameter")
@@ -119,7 +119,7 @@ def get_or_create_user_attributes(user):
     except UserAttributes.DoesNotExist:
         ua = UserAttributes()
         ua.segment_identify = False
-        ua.user = request.user
+        ua.user = user
         ua.save()
     return ua
 
