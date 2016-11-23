@@ -194,7 +194,7 @@ CELERYBEAT_SCHEDULE = {
     },
     'sync-helpscout': {
         'task': 'dataimporter.tasks.help_scout.update_synchronization',
-        'schedule': timedelta(seconds=30),
+        'schedule': timedelta(seconds=610),
     }
 }
 

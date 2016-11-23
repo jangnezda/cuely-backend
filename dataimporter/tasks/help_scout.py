@@ -83,9 +83,14 @@ def collect_customers(requester):
             )
             db_customer.helpscout_name = customer.fullname
             logger.debug("Processing Helpscout customer '%s' for user '%s'", customer.fullname, requester.username)
+            new_updated = customer.modifiedat
+            new_updated_ts = parse_dt(new_updated).timestamp()
+            if not created and db_customer.last_updated_ts:
+                new_updated_ts = db_customer.last_updated_ts \
+                    if db_customer.last_updated_ts > new_updated_ts else new_updated_ts
+            db_customer.last_updated = datetime.utcfromtimestamp(db_customer.last_updated_ts).isoformat() + 'Z'
+            db_customer.last_updated_ts = new_updated_ts
             db_customer.helpscout_title = 'User: {}'.format(customer.fullname)
-            db_customer.last_updated = customer.modifiedat
-            db_customer.last_updated_ts = parse_dt(customer.modifiedat).timestamp()
             db_customer.webview_link = 'https://secure.helpscout.net/customer/{}/0/'.format(customer.id)
             db_customer.primary_keywords = HELPSCOUT_KEYWORDS['primary']
             db_customer.secondary_keywords = HELPSCOUT_KEYWORDS['secondary']
@@ -141,8 +146,8 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
         # add sleep of one second to avoid breaking API rate limits
         time.sleep(1)
         helpscout_client.clearstate()
-    if db_customer.last_updated and db_customer.helpscout_status and \
-            db_customer.last_updated >= last_conversation.get('last_updated_ts', 0):
+    if db_customer.last_updated_ts and db_customer.helpscout_status and \
+            db_customer.last_updated_ts >= last_conversation.get('last_updated_ts', 0):
         logger.info(
             "Helpscout customer '%s' for user '%s' seems unchanged, skipping further processing",
             db_customer.helpscout_name, requester.username
