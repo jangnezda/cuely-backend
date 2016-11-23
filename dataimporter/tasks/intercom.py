@@ -20,10 +20,10 @@ INTERCOM_KEYWORDS = {
 }
 
 
-def start_synchronization(user):
+def start_synchronization(user, update=False):
     """ Run initial syncing of user's data in intercom. """
     if should_sync(user, 'intercom-apikeys', 'tasks.intercom'):
-        collect_users.delay(requester=user)
+        collect_users.delay(requester=user, sync_update=update)
     else:
         logger.info("Intercom api key for user '%s' already in use, skipping sync ...", user.username)
 
@@ -32,15 +32,15 @@ def start_synchronization(user):
 def update_synchronization():
     """ Run re-syncing of user's data in intercom. """
     for us in UserSocialAuth.objects.filter(provider='intercom-apikeys'):
-        start_synchronization(user=us.user)
+        start_synchronization(user=us.user, update=True)
 
 
 @shared_task
-def collect_users(requester):
+def collect_users(requester, sync_update=False):
     """ Fetch all users for this account from Intercom """
     init_intercom(requester)
-    for u in User.all():
-        if not u.name:
+    for u in User.find_all(sort='updated_at', order='desc'):
+        if not (u.name or u.email):
             # empty/rubbish data, can happen with Intercom API
             continue
 
@@ -49,13 +49,16 @@ def collect_users(requester):
             requester=requester,
             user_id=requester.id
         )
-        new_updated_ts = u.__dict__.get('last_request_at') or u.__dict__.get('updated_at')
+        new_updated_ts = u.__dict__.get('updated_at') or u.__dict__.get('last_request_at')
+        if sync_update and (new_updated_ts < datetime.now().timestamp() - 12 * 3600):
+            # user has been updated more than 12h ago, stop syncing other (older) users
+            break
         if not created and db_user.last_updated_ts:
             new_updated_ts = db_user.last_updated_ts if db_user.last_updated_ts > new_updated_ts else new_updated_ts
         db_user.last_updated_ts = new_updated_ts
         db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
         db_user.intercom_email = u.email
-        db_user.intercom_title = 'User: {}'.format(u.name)
+        db_user.intercom_title = 'User: {}'.format(u.name or u.email)
         db_user.webview_link = 'https://app.intercom.io/a/apps/{}/users/{}'.format(u.app_id, u.id)
         db_user.primary_keywords = INTERCOM_KEYWORDS['primary']
         db_user.secondary_keywords = INTERCOM_KEYWORDS['secondary']
@@ -101,7 +104,7 @@ def process_user(requester, user, db_user):
 
     # check if the last event timestamp/seen timestamp is different than old one
     user_updated_ts = user.get('updated_ts')
-    if user_updated_ts and user_updated_ts >= db_user.last_updated_ts:
+    if user_updated_ts and db_user.intercom_content and user_updated_ts >= db_user.last_updated_ts:
         logger.info("User '%s' seems unchanged, skipping further processing", user['name'])
         db_user.download_status = Document.READY
         db_user.save()
@@ -120,7 +123,7 @@ def process_user(requester, user, db_user):
         c = Company.find(id=user['companies'][0])
         if c and hasattr(c, 'name'):
             db_user.intercom_company = c.name
-            db_user.intercom_plan = c.plan.get('name') if c.plan else None
+            db_user.intercom_plan = c.plan.name if c.plan else None
             db_user.intercom_monthly_spend = c.monthly_spend
     # segments
     segments = []

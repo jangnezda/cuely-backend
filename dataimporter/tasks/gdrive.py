@@ -10,6 +10,7 @@ from celery import shared_task, subtask
 from oauth2client.client import GoogleCredentials
 
 from dataimporter.models import Document, SocialAttributes
+from dataimporter.task_util import should_sync
 import logging
 logger = logging.getLogger(__name__)
 
@@ -83,17 +84,21 @@ GDRIVE_KEYWORDS = {
 
 def start_synchronization(user):
     """ Run initial syncing of user's data in external systems. Gdrive-only at the moment. """
-    access_token, refresh_token = get_google_tokens(user)
+    if should_sync(user, 'google-oauth2', 'tasks.gdrive'):
+        access_token, refresh_token = get_google_tokens(user)
 
-    # ## gdrive ###################
-    # 1. Set the marker to have a reference point for later calls to gdrive changes api.
-    #    Without setting this starting point, changes api won't return any changes.
-    service = connect_to_gdrive(access_token, refresh_token)
-    response = service.changes().getStartPageToken().execute()
-    SocialAttributes.objects.update_or_create(user=user, defaults={'start_page_token': response.get('startPageToken')})
+        # ## gdrive ###################
+        # 1. Set the marker to have a reference point for later calls to gdrive changes api.
+        #    Without setting this starting point, changes api won't return any changes.
+        service = connect_to_gdrive(access_token, refresh_token)
+        response = service.changes().getStartPageToken().execute()
+        SocialAttributes.objects.update_or_create(
+            user=user, defaults={'start_page_token': response.get('startPageToken')})
 
-    # 2. Start the synchronization
-    collect_gdrive_docs.delay(user, access_token, refresh_token)
+        # 2. Start the synchronization
+        collect_gdrive_docs.delay(user, access_token, refresh_token)
+    else:
+        logger.info("Gdrive oauth token for user '%s' already in use, skipping sync ...", user.username)
 
 
 @shared_task
@@ -104,9 +109,12 @@ def update_synchronization():
     """
     logger.debug("Update synchronizations started")
     for sa in SocialAttributes.objects.filter(start_page_token__isnull=False):
-        if sa.user.social_auth.filter(provider='google-oauth2').first():
-            access_token, refresh_token = get_google_tokens(sa.user)
-            subtask(sync_gdrive_changes).delay(sa.user, access_token, refresh_token, sa.start_page_token)
+        if should_sync(sa.user, 'google-oauth2', 'tasks.gdrive'):
+            if sa.user.social_auth.filter(provider='google-oauth2').first():
+                access_token, refresh_token = get_google_tokens(sa.user)
+                subtask(sync_gdrive_changes).delay(sa.user, access_token, refresh_token, sa.start_page_token)
+        else:
+            logger.info("Gdrive oauth token for user '%s' already in use, skipping sync ...", sa.user.username)
 
 
 @shared_task

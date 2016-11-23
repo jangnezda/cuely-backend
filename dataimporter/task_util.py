@@ -2,6 +2,9 @@ from celery.task.control import inspect
 from dataimporter.models import User
 
 
+auth_fields = ['api_key', 'app_id', 'access_token']
+
+
 def get_social_data(user, provider, social_keys):
     social = user.social_auth.filter(provider=provider).first()
     if not social:
@@ -13,8 +16,8 @@ def get_api_creds(username, provider):
     u = User.objects.filter(username=username).first()
     if not u:
         return (None, None)
-    api_data = get_social_data(u, provider, ['api_key', 'app_id'])
-    return (api_data.get('app_id'), api_data.get('api_key'))
+    api_data = get_social_data(u, provider, auth_fields)
+    return filter(None, [api_data.get(x) for x in auth_fields])
 
 
 def get_active_api_keys(provider, package):
@@ -27,13 +30,15 @@ def get_active_api_keys(provider, package):
                 arg = next((task.get(x) for x in ['args', 'kwargs'] if '<User: ' in task.get(x)), None)
                 if arg:
                     username = arg.split('<User: ')[1].split('>')[0]
-                    api_key = get_api_creds(username, provider)[1]
-                    if api_key:
-                        active_keys.append(api_key)
+                    for auth_value in get_api_creds(username, provider):
+                        active_keys.append(auth_value)
     return active_keys
 
 
 def should_sync(user, provider, package):
     keys = get_active_api_keys(provider, package)
     social = user.social_auth.filter(provider=provider).first()
-    return social.extra_data.get('api_key') not in keys
+    if social:
+        return not any(social.extra_data.get(x) in keys for x in auth_fields)
+    else:
+        return True
