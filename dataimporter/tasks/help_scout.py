@@ -88,7 +88,7 @@ def collect_customers(requester):
             if not created and db_customer.last_updated_ts:
                 new_updated_ts = db_customer.last_updated_ts \
                     if db_customer.last_updated_ts > new_updated_ts else new_updated_ts
-            db_customer.last_updated = datetime.utcfromtimestamp(db_customer.last_updated_ts).isoformat() + 'Z'
+            db_customer.last_updated = datetime.utcfromtimestamp(new_updated_ts).isoformat() + 'Z'
             db_customer.last_updated_ts = new_updated_ts
             db_customer.helpscout_title = 'User: {}'.format(customer.fullname)
             db_customer.webview_link = 'https://secure.helpscout.net/customer/{}/0/'.format(customer.id)

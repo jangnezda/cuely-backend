@@ -2,7 +2,7 @@ from celery.task.control import inspect
 from dataimporter.models import User
 
 
-auth_fields = ['api_key', 'app_id', 'access_token']
+auth_fields = ['api_key', 'access_token']
 
 
 def get_social_data(user, provider, social_keys):
