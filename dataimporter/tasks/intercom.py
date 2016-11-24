@@ -53,7 +53,9 @@ def collect_users(requester, sync_update=False):
         if sync_update and (new_updated_ts < datetime.now().timestamp() - 12 * 3600):
             # user has been updated more than 12h ago, stop syncing other (older) users
             break
+        old_updated_ts = 1
         if not created and db_user.last_updated_ts:
+            old_updated_ts = db_user.last_updated_ts
             new_updated_ts = db_user.last_updated_ts if db_user.last_updated_ts > new_updated_ts else new_updated_ts
         db_user.last_updated_ts = new_updated_ts
         db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
@@ -73,7 +75,7 @@ def collect_users(requester, sync_update=False):
             'name': u.name,
             'segments': list(map(lambda x: x.id, u.segments)),
             'companies': list(map(lambda x: x.id, u.companies)),
-            'updated_ts': new_updated_ts
+            'old_updated_ts': old_updated_ts
         }
         subtask(process_user).delay(requester, intercom_user, db_user)
         # quick hack to avoid Intercom api rate limits
@@ -103,7 +105,7 @@ def process_user(requester, user, db_user):
         db_user.last_updated = datetime.utcfromtimestamp(db_user.last_updated_ts).isoformat() + 'Z'
 
     # check if the last event timestamp/seen timestamp is different than old one
-    user_updated_ts = user.get('updated_ts')
+    user_updated_ts = user.get('old_updated_ts')
     if user_updated_ts and db_user.intercom_content and user_updated_ts >= db_user.last_updated_ts:
         logger.info("User '%s' seems unchanged, skipping further processing", user['name'])
         db_user.download_status = Document.READY
