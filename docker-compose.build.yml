@@ -25,6 +25,8 @@ services:
       - INTERCOM_API_APP_ID=t4ll5bb1
       - INTERCOM_API_CLIENT_ID=e61a4de4-ab3f-45be-a6a4-a75b506de67b
       - INTERCOM_API_CLIENT_SECRET=e836f3c8-a63d-4781-810e-9761028af063
+      - OPBEAT_APPLICATION_ID=c8cca69ab7
+      - OPBEAT_TOKEN=7d0e3d206f858fbaeddb3ca0be74a7baf4280e9e
 
   db:
     image: mysql
@@ -62,6 +64,8 @@ services:
       - INTERCOM_API_APP_ID=t4ll5bb1
       - INTERCOM_API_CLIENT_ID=e61a4de4-ab3f-45be-a6a4-a75b506de67b
       - INTERCOM_API_CLIENT_SECRET=e836f3c8-a63d-4781-810e-9761028af063
+      - OPBEAT_APPLICATION_ID=c8cca69ab7
+      - OPBEAT_TOKEN=7d0e3d206f858fbaeddb3ca0be74a7baf4280e9e
     command: /usr/src/app/start_worker.sh
 
   beat:
@@ -87,6 +91,8 @@ services:
       - MYSQL_PASSWORD=cuely-backend-password
       - INTERCOM_API_CLIENT_ID=e61a4de4-ab3f-45be-a6a4-a75b506de67b
       - INTERCOM_API_CLIENT_SECRET=e836f3c8-a63d-4781-810e-9761028af063
+      - OPBEAT_APPLICATION_ID=c8cca69ab7
+      - OPBEAT_TOKEN=7d0e3d206f858fbaeddb3ca0be74a7baf4280e9e
     command: /usr/src/app/start_beat.sh
 
   ngrok:

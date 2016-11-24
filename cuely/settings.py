@@ -44,9 +44,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
+    'opbeat.contrib.django',
 ]
 
 MIDDLEWARE = [
+    'opbeat.contrib.django.middleware.OpbeatAPMMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -77,6 +79,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'cuely.wsgi.application'
 
+OPBEAT = {
+    'ORGANIZATION_ID': '6fdeb7471e66415ca8f90f81093af2b5',
+    'APP_ID': os.environ['OPBEAT_APPLICATION_ID'],
+    'SECRET_TOKEN': os.environ['OPBEAT_TOKEN'],
+    'DEBUG': DEBUG,
+}
 
 # Database
 # https://docs.djangoproject.com/en/1.10/ref/settings/#databases

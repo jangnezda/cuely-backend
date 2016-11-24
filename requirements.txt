@@ -1,6 +1,7 @@
 Django==1.10
 django-extensions
 django-registration==2.1.2
+opbeat==3.5.1
 
 mysqlclient
 ipython

@@ -19,6 +19,8 @@ services:
       - EMAIL_PORT=25
       - EMAIL_HOST_USER=AKIAJSIFJVXZUWSXVQMA
       - EMAIL_HOST_PASSWORD=AoZVItTzoqUeUiB9eBjR82W9uKCrIltvSxgZ/CeCtpKv
+      - OPBEAT_APPLICATION_ID=9db5d102d0
+      - OPBEAT_TOKEN=7d0e3d206f858fbaeddb3ca0be74a7baf4280e9e
 
   worker:
     image: pipetop/cuely-backend
@@ -35,6 +37,8 @@ services:
       - REDIS_ENDPOINT=cuely-celery.h4s6xj.0001.euw1.cache.amazonaws.com
       - MYSQL_USER=root
       - MYSQL_PASSWORD=A1PMCIhlu1AB
+      - OPBEAT_APPLICATION_ID=9db5d102d0
+      - OPBEAT_TOKEN=7d0e3d206f858fbaeddb3ca0be74a7baf4280e9e
     command: /usr/src/app/start_worker.sh
 
   beat:
@@ -52,4 +56,6 @@ services:
       - REDIS_ENDPOINT=cuely-celery.h4s6xj.0001.euw1.cache.amazonaws.com
       - MYSQL_USER=root
       - MYSQL_PASSWORD=A1PMCIhlu1AB
+      - OPBEAT_APPLICATION_ID=9db5d102d0
+      - OPBEAT_TOKEN=7d0e3d206f858fbaeddb3ca0be74a7baf4280e9e
     command: /usr/src/app/start_beat.sh
