@@ -65,10 +65,7 @@ class Document(models.Model):
     helpscout_content = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        if self.title:
-            return self.title
-        else:
-            return "Untitled document"
+        return str(self.id) if self.id else "Not saved to DB"
 
     def resync(self):
         self.content = None

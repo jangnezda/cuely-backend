@@ -164,12 +164,10 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
     db_customer.helpscout_folder = last_conversation.get('folder')
     db_customer.helpscout_status = last_conversation.get('status')
     db_customer.helpscout_assigned = last_conversation.get('owner') is not None
-    # filter out any 'None' elements
-    conversation_emails.discard(None)
     if conversation_emails:
         if db_customer.helpscout_emails:
             conversation_emails = conversation_emails.union(db_customer.helpscout_emails.split(', '))
-        db_customer.helpscout_emails = ', '.join(conversation_emails)
+        db_customer.helpscout_emails = ', '.join(filter(None, conversation_emails))
 
     # build helpscout content json
     content = process_conversations(users, conversations, helpscout_client)
