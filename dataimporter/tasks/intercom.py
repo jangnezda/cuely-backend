@@ -181,6 +181,7 @@ def process_conversations(user_id, user_name):
                 'open': conversation.get('open', False),
                 'items': items
             })
+            time.sleep(0.5)
     except AuthenticationError:
         # conversations are only available on paid accounts that have 'Engage' plan
         # ... or in other words, has to be an account that has enabled in-app messaging
