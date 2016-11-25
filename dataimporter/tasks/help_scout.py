@@ -99,7 +99,7 @@ def collect_customers(requester):
             db_customer.save()
             subtask(process_customer).delay(requester, db_customer, mailboxes, folders, users)
             # add sleep of one second to avoid breaking API rate limits
-            time.sleep(1)
+            time.sleep(2)
 
 
 @shared_task
