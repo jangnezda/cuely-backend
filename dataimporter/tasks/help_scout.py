@@ -121,6 +121,7 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
             for bc in box_conversations:
                 conversation = {
                     'id': bc.id,
+                    'number': '#{}'.format(bc.number),
                     'mailbox': box_name,
                     'mailbox_id': box_id,
                     'folder': folders.get(bc.folderid),
@@ -144,7 +145,7 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
                         conversation.get('last_updated_ts', 0) > last_conversation.get('last_updated_ts', 0):
                     last_conversation = conversation
         # add sleep of one second to avoid breaking API rate limits
-        time.sleep(1)
+        time.sleep(1.5)
         helpscout_client.clearstate()
     if db_customer.last_updated_ts and db_customer.helpscout_status and \
             db_customer.last_updated_ts >= last_conversation.get('last_updated_ts', 0):
@@ -163,6 +164,8 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
     db_customer.helpscout_folder = last_conversation.get('folder')
     db_customer.helpscout_status = last_conversation.get('status')
     db_customer.helpscout_assigned = last_conversation.get('owner') is not None
+    # filter out any 'None' elements
+    conversation_emails.discard(None)
     if conversation_emails:
         if db_customer.helpscout_emails:
             conversation_emails = conversation_emails.union(db_customer.helpscout_emails.split(', '))
@@ -215,6 +218,14 @@ def process_conversations(users, conversations, helpscout_client):
 
             content['conversations'].insert(0, c)
         helpscout_client.clearstate()
+        # work around algolia 10k bytes limit
+        clipped = False
+        while len(json.dumps(content).encode('UTF-8')) > 9000:
+            clipped = True
+            content['conversations'] = content['conversations'][:-1]
+        if clipped:
+            break
+
     content['users'] = [v for k, v in active_users.items()]
     return content
 
