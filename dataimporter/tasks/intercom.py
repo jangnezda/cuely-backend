@@ -46,13 +46,15 @@ def collect_users(requester, sync_update=False):
     """ Fetch all users for this account from Intercom """
     init_intercom(requester)
 
-    counts = Count.find()
     params = {'sort': 'updated_at', 'order': 'desc'}
     fn = User.find_all
-    if counts.user.get('count') > 5000:
-        # use Scroll API if user has more than 5k Intercom users
-        fn = User.scroll
-        params = {}
+    if not sync_update:
+        counts = Count.find()
+        if counts.user.get('count') > 5000:
+            # use Scroll API if user has more than 5k Intercom users
+            fn = User.scroll
+            params = {}
+            logger.debug("Using scroll API for user %s/%s", requester.username, requester.id)
 
     i = 0
     user_cache = {}
