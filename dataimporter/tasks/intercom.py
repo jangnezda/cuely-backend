@@ -1,6 +1,9 @@
 """
 Intercom API integration. A note about date/time manipulation: python-intercom library which is used for this
 integration  naively translates timestamps to dates, therefore we try to access the underlying data directly.
+
+Some users may have many Intercom objects (5 or 10 thousand or even more) and to pull all that data we
+quickly run into api rate limits. Therefore, we sprinkle the code with time sleeps here and there.
 """
 import json
 import time
@@ -39,7 +42,10 @@ def update_synchronization():
 def collect_users(requester, sync_update=False):
     """ Fetch all users for this account from Intercom """
     init_intercom(requester)
+    i = 0
+    user_cache = {}
     for u in User.find_all(sort='updated_at', order='desc'):
+        i = i + 1
         if not (u.name or u.email):
             # empty/rubbish data, can happen with Intercom API
             continue
@@ -69,7 +75,7 @@ def collect_users(requester, sync_update=False):
         db_user.save()
         # can't pickle whole Intercom user object, because it contains helper methods like 'load', 'find', etc.
         # therefore, let's just copy the data we're interested in
-        intercom_user = {
+        user_cache[u.id] = {
             'id': u.id,
             'app_id': u.app_id,
             'name': u.name,
@@ -77,9 +83,16 @@ def collect_users(requester, sync_update=False):
             'companies': list(map(lambda x: x.id, u.companies)),
             'old_updated_ts': old_updated_ts
         }
-        subtask(process_user).delay(requester, intercom_user, db_user)
-        # quick hack to avoid Intercom api rate limits
-        time.sleep(3)
+        if i % 50 == 0:
+            # quick hack to avoid Intercom api rate limits
+            time.sleep(2)
+
+    # fetch user's conversations and events
+    for uid, udata in user_cache.items():
+        db_user = Document.objects.filter(user_id=requester.id, intercom_user_id=uid).first()
+        if db_user:
+            subtask(process_user).delay(requester, udata, db_user)
+            time.sleep(2)
 
 
 @shared_task
