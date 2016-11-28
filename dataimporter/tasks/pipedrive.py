@@ -104,9 +104,13 @@ def build_deal_content(deal, users, org_domain, pipe_client):
     if deal.participants_count > 1:
         for participant in pipe_client.Participant.fetch_all(filter_id=deal.id):
             if participant.person.get('name') != person_name:
+                # person's email can be a string or a list (of dicts)
+                email = participant.person.get('email')
+                if not isinstance(email, str):
+                    email = email[0].get('value') if len(email) > 0 else None
                 content['contacts'].append({
                     'name': participant.person.get('name'),
-                    'email': participant.person.get('email', [{}])[0].get('value') or None,
+                    'email': email,
                     'url': 'https://{}.pipedrive.com/person/{}'.format(org_domain, participant.id)
                 })
     # users

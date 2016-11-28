@@ -18,5 +18,6 @@ google-api-python-client==1.5.3
 oauth2client==3.0.0
 algoliasearch-django==1.2.4
 python-intercom==2.1.1
+
 git+git://github.com/pipetop/pypedriver@master#egg=pypedriver
 git+git://github.com/pipetop/helpscout-api-python@master#egg=helpscout
