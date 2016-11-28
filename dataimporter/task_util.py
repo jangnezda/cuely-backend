@@ -42,3 +42,18 @@ def should_sync(user, provider, package):
         return not any(social.extra_data.get(x) in keys for x in auth_fields)
     else:
         return True
+
+
+def cut_utf_string(s, bytes_len_max, step=1):
+    """
+    Algolia has record limit of 10 kilobytes. Therefore, we need to cut file content to less than that.
+    Unfortunately, there is no easy way to cut a UTF string to exact bytes length (characters may be in
+    different byte sizes, i.e. usually up to 4 bytes).
+    """
+    # worst case, every character is 1 byte, so we first cut the string to max bytes length
+    s = s[:bytes_len_max]
+    l = len(s.encode('UTF-8'))
+    while l > bytes_len_max:
+        s = s[:-step]
+        l = len(s.encode('UTF-8'))
+    return s

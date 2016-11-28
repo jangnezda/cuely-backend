@@ -106,7 +106,7 @@ def collect_users(requester, sync_update=False):
         db_user = Document.objects.filter(user_id=requester.id, intercom_user_id=uid).first()
         if db_user:
             subtask(process_user).delay(requester, udata, db_user)
-            time.sleep(2)
+            time.sleep(3)
 
 
 @shared_task

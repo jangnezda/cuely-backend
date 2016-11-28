@@ -9,7 +9,7 @@ from dateutil.parser import parse as parse_dt
 from celery import shared_task, subtask
 
 import helpscout
-from dataimporter.task_util import should_sync
+from dataimporter.task_util import should_sync, cut_utf_string
 from dataimporter.models import Document
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
@@ -147,7 +147,12 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
         # add sleep of one second to avoid breaking API rate limits
         time.sleep(1.5)
         helpscout_client.clearstate()
-    if db_customer.last_updated_ts and db_customer.helpscout_status and \
+
+    has_conversations = False
+    if db_customer.helpscout_content:
+        has_conversations = len(json.loads(db_customer.helpscout_content.get('conversations', []))) > 0
+
+    if has_conversations and db_customer.last_updated_ts and db_customer.helpscout_status and \
             db_customer.last_updated_ts >= last_conversation.get('last_updated_ts', 0):
         logger.info(
             "Helpscout customer '%s' for user '%s' seems unchanged, skipping further processing",
@@ -207,7 +212,7 @@ def process_conversations(users, conversations, helpscout_client):
                         'created': parse_dt(t.get('createdAt')).timestamp(),
                         'author': p.get('name'),
                         'author_id': p.get('id'),
-                        'body': t.get('body'),
+                        'body': cut_utf_string(t.get('body'), 2000, 300),
                         'is_customer': is_customer
                     })
                 uid = t['createdBy'].get('id')
@@ -219,8 +224,10 @@ def process_conversations(users, conversations, helpscout_client):
         # work around algolia 10k bytes limit
         clipped = False
         while len(json.dumps(content).encode('UTF-8')) > 9000:
+            print('CLIPPING ...')
             clipped = True
             content['conversations'] = content['conversations'][:-1]
+        print(json.dumps(content))
         if clipped:
             break
 
