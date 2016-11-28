@@ -4,12 +4,15 @@ integration  naively translates timestamps to dates, therefore we try to access 
 
 Some users may have many Intercom objects (5 or 10 thousand or even more) and to pull all that data we
 quickly run into api rate limits. Therefore, we sprinkle the code with time sleeps here and there.
+Additionally, using normal user listing in Intercom API returns max of 10k users. If there are more,
+then we must use Scroll API, which is still in beta ...
 """
 import json
 import time
 from datetime import datetime, timezone
 from celery import shared_task, subtask
-from intercom import Event, Intercom, User, Admin, Company, Segment, Conversation, AuthenticationError, ResourceNotFound
+from intercom import Event, Intercom, User, Admin, Company, Segment, Count,\
+    Conversation, AuthenticationError, ResourceNotFound
 
 from dataimporter.models import Document
 from dataimporter.task_util import should_sync
@@ -42,9 +45,18 @@ def update_synchronization():
 def collect_users(requester, sync_update=False):
     """ Fetch all users for this account from Intercom """
     init_intercom(requester)
+
+    counts = Count.find()
+    params = {'sort': 'updated_at', 'order': 'desc'}
+    fn = User.find_all
+    if counts.user.get('count') > 5000:
+        # use Scroll API if user has more than 5k Intercom users
+        fn = User.scroll
+        params = {}
+
     i = 0
     user_cache = {}
-    for u in User.find_all(sort='updated_at', order='desc'):
+    for u in fn(**params):
         i = i + 1
         if not (u.name or u.email):
             # empty/rubbish data, can happen with Intercom API
@@ -194,7 +206,7 @@ def process_conversations(user_id, user_name):
                 'open': conversation.get('open', False),
                 'items': items
             })
-            time.sleep(0.5)
+            time.sleep(1)
     except AuthenticationError:
         # conversations are only available on paid accounts that have 'Engage' plan
         # ... or in other words, has to be an account that has enabled in-app messaging
