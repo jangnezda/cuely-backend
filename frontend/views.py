@@ -117,9 +117,8 @@ def get_or_create_user_attributes(user):
     try:
         ua = user.userattributes
     except UserAttributes.DoesNotExist:
-        ua = UserAttributes()
+        ua, created = UserAttributes.objects.get_or_create(user=user)
         ua.segment_identify = False
-        ua.user = user
         ua.save()
     return ua
 
