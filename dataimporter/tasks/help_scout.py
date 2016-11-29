@@ -150,7 +150,7 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
 
     has_conversations = False
     if db_customer.helpscout_content:
-        has_conversations = len(json.loads(db_customer.helpscout_content.get('conversations', []))) > 0
+        has_conversations = len(json.loads(db_customer.helpscout_content).get('conversations', [])) > 0
 
     if has_conversations and db_customer.last_updated_ts and db_customer.helpscout_status and \
             db_customer.last_updated_ts >= last_conversation.get('last_updated_ts', 0):
