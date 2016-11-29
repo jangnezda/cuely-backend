@@ -201,7 +201,7 @@ def process_conversations(user_id, user_name):
                     'timestamp': part.__dict__['created_at'],
                     'author': _find_user(part.author.id),
                     'author_id': part.author.id,
-                    'body': part.body
+                    'body': part.body or ''
                 })
             result.append({
                 'subject': conversation.get('conversation_message', {}).get('subject', ''),
