@@ -87,7 +87,7 @@ def collect_articles(requester):
                 )
                 logger.debug("Processing Helpscout article '%s' for user '%s'", article.name, requester.username)
                 db_doc.helpscout_document_title = 'Doc: {}'.format(article.name)
-                new_updated = article.modifiedat
+                new_updated = article.updatedat
                 new_updated_ts = parse_dt(new_updated).timestamp()
                 if not created and db_doc.last_updated_ts:
                     new_updated_ts = db_doc.last_updated_ts \
@@ -103,7 +103,7 @@ def collect_articles(requester):
                 db_doc.helpscout_document_categories = [names[0]] if not names[0] == 'Uncategorized' else []
                 db_doc.helpscout_document_status = article.status
                 db_doc.helpscout_document_keywords = article.keywords or []
-                db_doc.helpscout_document_users = [users.get(x.id) for x in set([article.createdby, article.updatedby])]
+                db_doc.helpscout_document_users = [users.get(x) for x in set([article.createdby, article.updatedby])]
                 db_doc.save()
                 subtask(process_article).delay(requester, db_doc, cats)
                 time.sleep(1)
@@ -116,8 +116,9 @@ def process_article(requester, db_doc, cats):
     db_doc.save()
 
     article_details = docs_client.article(db_doc.helpscout_document_id)
-    db_doc.categories = filter(None, [cats.get(x, [None])[0] for x in article_details.categories])
-    db_doc.content = cut_utf_string(article_details.text, 9000, 300)
+    db_doc.helpscout_document_categories = \
+        [c for c in [cats.get(x, [None])[0] for x in article_details.categories] if c]
+    db_doc.helpscout_document_content = cut_utf_string(article_details.text, 9000, 300)
 
     db_doc.download_status = Document.READY
     db_doc.last_synced = _get_utc_timestamp()
@@ -125,7 +126,7 @@ def process_article(requester, db_doc, cats):
 
 
 def init_helpscout_client(user):
-    return _init_client(user, 'helpscout-docs-apikeys', False)
+    return _init_client(user, 'helpscout-apikeys', False)
 
 
 def init_helpscout_docs_client(user):
@@ -133,7 +134,7 @@ def init_helpscout_docs_client(user):
 
 
 def _init_client(user, provider, is_docs=False):
-    social = user.social_auth.filter('helpscout-docs-apikeys').first()
+    social = user.social_auth.filter(provider=provider).first()
     if social:
         client = helpscout.ClientDocs() if is_docs else helpscout.Client()
         client.api_key = social.extra_data['api_key']
