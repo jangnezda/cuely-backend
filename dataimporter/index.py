@@ -14,9 +14,11 @@ class DocumentIndex(AlgoliaIndex):
             'unordered(intercom_title)',
             'unordered(pipedrive_title)',
             'unordered(helpscout_title)',
+            'unordered(helpscout_document_title)',
             'owner_display_name',
             'modifier_display_name',
-            'path',
+            'helpscout_document_users',
+            'unordered(path)',
             'intercom_company',
             'intercom_email',
             'helpscout_emails',
@@ -24,6 +26,8 @@ class DocumentIndex(AlgoliaIndex):
             'intercom_content',
             'pipedrive_content',
             'helpscout_content',
+            'helpscout_document_content',
+            'helpscout_document_keywords',
             'intercom_segments'
         ],
         # adjust ranking formula
@@ -93,5 +97,14 @@ class DocumentIndex(AlgoliaIndex):
         'helpscout_folder',
         'helpscout_status',
         'helpscout_assigned',
-        'helpscout_content'
+        'helpscout_content',
+        'helpscout_document_id',
+        'helpscout_document_title',
+        'helpscout_document_collection',
+        'helpscout_document_categories',
+        'helpscout_document_content',
+        'helpscout_document_users',
+        'helpscout_document_keywords',
+        'helpscout_document_status',
+        'helpscout_document_public_link'
     )

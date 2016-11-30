@@ -72,6 +72,7 @@ class Document(models.Model):
     helpscout_document_users = JSONField(default=dict)
     helpscout_document_keywords = JSONField(default=list)
     helpscout_document_status = models.CharField(max_length=50, blank=True, null=True)
+    helpscout_document_public_link = models.CharField(max_length=500, blank=True, null=True)
 
     def __str__(self):
         return str(self.id) if self.id else "Not saved to DB"
