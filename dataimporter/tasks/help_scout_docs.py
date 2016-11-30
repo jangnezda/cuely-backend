@@ -92,6 +92,10 @@ def collect_articles(requester):
                 if not created and db_doc.last_updated_ts:
                     new_updated_ts = db_doc.last_updated_ts \
                         if db_doc.last_updated_ts > new_updated_ts else new_updated_ts
+                if db_doc.last_updated_ts >= new_updated_ts:
+                    logger.info("Helpscout article '%s' for user '%s' is unchanged", article.name, requester.username)
+                    continue
+
                 db_doc.last_updated = datetime.utcfromtimestamp(new_updated_ts).isoformat() + 'Z'
                 db_doc.last_updated_ts = new_updated_ts
                 db_doc.webview_link = 'https://secure.helpscout.net/docs/{}/article/{}/'.format(
