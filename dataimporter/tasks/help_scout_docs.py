@@ -76,7 +76,7 @@ def collect_articles(requester):
 
     for cat_id, names in cats.items():
         while True:
-            articles = docs_client.articles(cat_id)
+            articles = docs_client.articles(cat_id, status='published')
             if not articles or articles.count < 1:
                 break
             for article in articles:
