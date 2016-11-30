@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
+    'django_mysql',
     'opbeat.contrib.django',
 ]
 
@@ -127,6 +128,7 @@ AUTHENTICATION_BACKENDS = (
     'dataimporter.auth.IntercomApiKeysAuth',
     'dataimporter.auth.PipedriveApiKeysAuth',
     'dataimporter.auth.HelpscoutApiKeysAuth',
+    'dataimporter.auth.HelpscoutDocsApiKeysAuth',
     'django.contrib.auth.backends.ModelBackend',
 )
 
@@ -148,6 +150,7 @@ SOCIAL_AUTH_INTERCOM_APIKEYS_FORM_URL = '/home/intercom_apikeys/'
 SOCIAL_AUTH_PIPEDRIVE_APIKEYS_FORM_URL = '/home/pipedrive_apikeys/'
 
 SOCIAL_AUTH_HELPSCOUT_APIKEYS_FORM_URL = '/home/helpscout_apikeys/'
+SOCIAL_AUTH_HELPSCOUT_DOCS_APIKEYS_FORM_URL = '/home/helpscout_docs_apikeys/'
 
 SOCIAL_AUTH_PIPELINE = (
     'social.pipeline.social_auth.social_details',

@@ -48,7 +48,18 @@
       <a class="btn disabled btn-block btn-social btn-reddit" href="#">
         <img src="{% static "frontend/helpscout-logo.png" %}" style="padding: 3px">Helpscout integration is ready
       </a>
+			{# Only show DOCS api button if user already has Helpscout api key #}
+			{% if "helpscout-docs-apikeys" not in backends %}
+				<a class="btn btn-block btn-social btn-reddit" href="/login/helpscout-docs-apikeys">
+					<img src="{% static "frontend/helpscout-logo.png" %}" style="padding: 3px">Add Helpscout DOCS integration
+				</a>
+			{% else %}
+				<a class="btn disabled btn-block btn-social btn-reddit" href="#">
+					<img src="{% static "frontend/helpscout-logo.png" %}" style="padding: 3px">Helpscout DOCS integration is ready
+				</a>
+			{% endif %}
     {% endif %}
+
   </div>
 </div>
 {% else %}

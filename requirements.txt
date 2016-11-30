@@ -4,6 +4,8 @@ django-registration==2.1.2
 opbeat==3.5.1
 
 mysqlclient
+django-mysql==1.1.0
+sqlparse==0.2.2
 ipython
 django-bootstrap3
 python-dateutil==2.5.3

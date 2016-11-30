@@ -119,3 +119,8 @@ class HelpscoutApiKeysAuth(LegacyAuth):
         }
         kwargs.update({'response': user_data, 'backend': self})
         return self.strategy.authenticate(*args, **kwargs)
+
+
+class HelpscoutDocsApiKeysAuth(HelpscoutApiKeysAuth):
+    """ Authentication using Helpscout Docs Api key. """
+    name = 'helpscout-docs-apikeys'
