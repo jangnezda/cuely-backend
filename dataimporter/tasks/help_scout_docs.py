@@ -92,9 +92,10 @@ def collect_articles(requester):
                 if not created and db_doc.last_updated_ts:
                     new_updated_ts = db_doc.last_updated_ts \
                         if db_doc.last_updated_ts > new_updated_ts else new_updated_ts
-                if db_doc.last_updated_ts >= new_updated_ts:
-                    logger.info("Helpscout article '%s' for user '%s' is unchanged", article.name, requester.username)
-                    continue
+                    if db_doc.last_updated_ts >= new_updated_ts:
+                        logger.info("Helpscout article '%s' for user '%s' is unchanged",
+                                    article.name, requester.username)
+                        continue
 
                 db_doc.last_updated = datetime.utcfromtimestamp(new_updated_ts).isoformat() + 'Z'
                 db_doc.last_updated_ts = new_updated_ts
@@ -121,7 +122,7 @@ def process_article(requester, db_doc, cats):
 
     article_details = docs_client.article(db_doc.helpscout_document_id)
     db_doc.helpscout_document_categories = \
-        [c for c in [cats.get(x, [None])[0] for x in article_details.categories] if c]
+        [c for c in [cats.get(x, [None])[0] for x in article_details.categories] if c and c != 'Uncategorized']
     db_doc.helpscout_document_content = cut_utf_string(article_details.text, 9000, 300)
 
     db_doc.download_status = Document.READY
