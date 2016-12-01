@@ -221,6 +221,7 @@ def process_conversations(users, conversations, helpscout_client):
 
             content['conversations'].insert(0, c)
         helpscout_client.clearstate()
+        time.sleep(0.5)
 
     # work around algolia 10k bytes limit
     step = 1
