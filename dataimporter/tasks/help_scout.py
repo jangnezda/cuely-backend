@@ -221,15 +221,27 @@ def process_conversations(users, conversations, helpscout_client):
 
             content['conversations'].insert(0, c)
         helpscout_client.clearstate()
-        # work around algolia 10k bytes limit
-        clipped = False
-        while len(json.dumps(content).encode('UTF-8')) > 9000:
-            print('CLIPPING ...')
-            clipped = True
-            content['conversations'] = content['conversations'][:-1]
-        print(json.dumps(content))
-        if clipped:
-            break
+
+    # work around algolia 10k bytes limit
+    step = 1
+    while len(json.dumps(content).encode('UTF-8')) > 9000:
+        if step > 10:
+            logger.info("Oops, step is over 10. Must be a really long Helpscout conversation")
+            for c in reversed(content['conversations']):
+                if len(c['threads']) > 0:
+                    c['threads'] = []
+                    break
+
+        for c in content['conversations']:
+            max_len = 0
+            max_t = None
+            for t in c['threads']:
+                if len(t['body']) > max_len:
+                    max_len = len(t['body'])
+                    max_t = t
+            if max_t:
+                max_t['body'] = cut_utf_string(max_t['body'], int(len(max_t['body']) / 2), 50)
+        step = step + 1
 
     content['users'] = [v for k, v in active_users.items()]
     return content
