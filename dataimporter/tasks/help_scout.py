@@ -232,6 +232,12 @@ def process_conversations(users, conversations, helpscout_client):
                 if len(c['threads']) > 0:
                     c['threads'] = []
                     break
+            step = step + 1
+            if step > 50:
+                # give up, just remove the threads
+                for c in content['conversations']:
+                    c['threads'] = []
+                break
 
         for c in content['conversations']:
             max_len = 0
