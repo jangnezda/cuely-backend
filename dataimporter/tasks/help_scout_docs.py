@@ -42,23 +42,21 @@ def update_synchronization():
 def collect_articles(requester):
     helpscout_client = init_helpscout_client(requester)
     docs_client = init_helpscout_docs_client(requester)
-    if not helpscout_client:
-        logger.warn("User %s is missing Helpscout API key", requester.username)
-        return
     if not docs_client:
         logger.warn("User %s is missing Helpscout Docs API key", requester.username)
         return
     # cache users
     users = {}
-    while True:
-        helpscout_users = helpscout_client.users()
-        if not helpscout_users or helpscout_users.count < 1:
-            break
-        for u in helpscout_users:
-            users[u.id] = {
-                'name': u.fullname,
-                'avatar': u.photourl
-            }
+    if helpscout_client:
+        while True:
+            helpscout_users = helpscout_client.users()
+            if not helpscout_users or helpscout_users.count < 1:
+                break
+            for u in helpscout_users:
+                users[u.id] = {
+                    'name': u.fullname,
+                    'avatar': u.photourl
+                }
 
     # cache categories
     cats = dict()
@@ -108,7 +106,8 @@ def collect_articles(requester):
                 db_doc.helpscout_document_categories = [names[0]] if not names[0] == 'Uncategorized' else []
                 db_doc.helpscout_document_status = article.status
                 db_doc.helpscout_document_keywords = article.keywords or []
-                db_doc.helpscout_document_users = [users.get(x) for x in set([article.createdby, article.updatedby])]
+                db_doc.helpscout_document_users = \
+                    [users.get(x) for x in set([article.createdby, article.updatedby])] if users else []
                 db_doc.save()
                 subtask(process_article).delay(requester, db_doc, cats)
                 time.sleep(1)

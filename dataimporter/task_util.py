@@ -23,7 +23,7 @@ def get_api_creds(username, provider):
 def get_active_api_keys(provider, package):
     active_tasks = inspect().active()
     active_keys = []
-    for key, task_list in active_tasks.items():
+    for key, task_list in (active_tasks.items() or []):
         for task in (task_list or []):
             # unfortunately, celery inspect() returns arguments as string, so there has to be some hacky manipulation
             if package in task.get('name'):
