@@ -75,6 +75,7 @@ class DocumentIndex(AlgoliaIndex):
         'intercom_plan',
         'intercom_monthly_spend',
         'intercom_company',
+        'intercom_status',
 
         # Pipedrive
         'pipedrive_deal_id',

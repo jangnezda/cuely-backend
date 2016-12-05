@@ -140,6 +140,8 @@ def process_user(requester, user, db_user):
         return
 
     conversations = process_conversations(user['id'], user['name'])
+    if any(x.get('open') is True for x in conversations):
+        db_user.intercom_status = 'Open'
     # work around algolia 10k bytes limit
     while len(json.dumps(conversations).encode('UTF-8')) > 9000:
         conversations = conversations[:-1]
