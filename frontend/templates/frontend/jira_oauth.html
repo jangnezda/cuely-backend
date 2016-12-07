@@ -1,0 +1,21 @@
+
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+{% if request.user.is_authenticated %}
+<div class="panel panel-default" style="width: 500px">
+  <div class="panel-heading">JIRA OAuth setup</div>
+  <div class="panel-body">
+		<form action="/complete/jira-oauth">
+			<input type="text" value="" placeholder="Jira server address" name="jira_server" required size="60" /><br/><br/>
+			<input type="text" value="" placeholder="Consumer Key" name="consumer_key" required size="50" /><br/><br/>
+			<input type="submit" value="Start OAuth Flow">
+		</form>
+  </div>
+</div>
+{% else %}
+Please log in!
+{% endif %}
+
+{% endblock %}

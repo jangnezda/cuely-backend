@@ -49,6 +49,10 @@ def helpscout_docs_apikeys(request):
     return render(request, 'frontend/helpscout_docs_apikeys.html', {})
 
 
+def jira_oauth(request):
+    return render(request, 'frontend/jira_oauth.html', {})
+
+
 @require_POST
 def start_synchronization(request):
     if request.user.is_authenticated:

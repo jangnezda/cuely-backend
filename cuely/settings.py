@@ -16,6 +16,7 @@ from datetime import timedelta
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+AUTH_FILES_DIR = os.path.join(BASE_DIR, 'dataimporter/auth_files')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/
@@ -129,6 +130,7 @@ AUTHENTICATION_BACKENDS = (
     'dataimporter.auth.PipedriveApiKeysAuth',
     'dataimporter.auth.HelpscoutApiKeysAuth',
     'dataimporter.auth.HelpscoutDocsApiKeysAuth',
+    'dataimporter.auth.JiraOAuth',
     'django.contrib.auth.backends.ModelBackend',
 )
 
@@ -151,6 +153,8 @@ SOCIAL_AUTH_PIPEDRIVE_APIKEYS_FORM_URL = '/home/pipedrive_apikeys/'
 
 SOCIAL_AUTH_HELPSCOUT_APIKEYS_FORM_URL = '/home/helpscout_apikeys/'
 SOCIAL_AUTH_HELPSCOUT_DOCS_APIKEYS_FORM_URL = '/home/helpscout_docs_apikeys/'
+
+SOCIAL_AUTH_JIRA_OAUTH_FORM_URL = '/home/jira_oauth/'
 
 SOCIAL_AUTH_PIPELINE = (
     'social.pipeline.social_auth.social_details',

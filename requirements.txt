@@ -19,6 +19,8 @@ python-social-auth==0.2.21
 google-api-python-client==1.5.3
 oauth2client==3.0.0
 algoliasearch-django==1.2.4
+jira==1.0.7
+cryptography==1.6
 
 git+git://github.com/pipetop/pypedriver@master#egg=pypedriver
 git+git://github.com/pipetop/helpscout-api-python@master#egg=helpscout

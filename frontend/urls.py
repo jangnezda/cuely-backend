@@ -12,5 +12,6 @@ urlpatterns = [
     url(r'pipedrive_apikeys/?', views.pipedrive_apikeys),
     url(r'helpscout_apikeys/?', views.helpscout_apikeys),
     url(r'helpscout_docs_apikeys/?', views.helpscout_docs_apikeys),
+    url(r'jira_oauth/?', views.jira_oauth),
     url(r'', views.index, name='index'),
 ]

@@ -60,6 +60,16 @@
 			</a>
 		{% endif %}
 
+		{% if "jira-oauth" not in backends %}
+			<a class="btn btn-block btn-social btn-reddit" href="/login/jira-oauth">
+				<img src="{% static "frontend/jira-logo.png" %}" style="padding: 3px">Add JIRA integration
+			</a>
+		{% else %}
+			<a class="btn disabled btn-block btn-social btn-reddit" href="#">
+				<img src="{% static "frontend/jira-logo.png" %}" style="padding: 3px">JIRA integration is ready
+			</a>
+		{% endif %}
+
   </div>
 </div>
 {% else %}

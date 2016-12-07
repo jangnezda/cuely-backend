@@ -241,6 +241,7 @@ def init_intercom(user):
     else:
         social = user.social_auth.get(provider='intercom-oauth')
         Intercom.app_id = social.extra_data['access_token']
+        Intercom.app_api_key = ''
 
 
 def _get_utc_timestamp():

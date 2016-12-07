@@ -95,3 +95,7 @@ class SocialAttributes(models.Model):
 class UserAttributes(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     segment_identify = models.BooleanField(blank=False, null=False, default=True)
+    jira_server = models.CharField(max_length=500, blank=True, null=True)
+    jira_consumer_key = models.CharField(max_length=500, blank=True, null=True)
+    jira_oauth_token = models.CharField(max_length=500, blank=True, null=True)
+    jira_oauth_verifier = models.CharField(max_length=500, blank=True, null=True)
