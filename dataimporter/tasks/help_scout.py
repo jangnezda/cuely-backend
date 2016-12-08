@@ -42,6 +42,9 @@ def update_synchronization():
 @shared_task
 def collect_customers(requester):
     helpscout_client = init_helpscout_client(requester)
+    if not helpscout_client:
+        logger.warn("User is missing Helpscout API key", requester.username)
+        return
     # cache all mailboxes and their folders
     mailboxes = {m.id: m.name for m in helpscout_client.mailboxes()}
     folders = {}

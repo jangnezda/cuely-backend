@@ -41,6 +41,9 @@ def update_synchronization():
 @shared_task
 def collect_articles(requester):
     helpscout_client = init_helpscout_client(requester)
+    if not helpscout_client:
+        logger.warn("User %s is missing Helpscout API key", requester.username)
+        return
     docs_client = init_helpscout_docs_client(requester)
     if not docs_client:
         logger.warn("User %s is missing Helpscout Docs API key", requester.username)
@@ -85,8 +88,8 @@ def collect_articles(requester):
                 )
                 logger.debug("Processing Helpscout article '%s' for user '%s'", article.name, requester.username)
                 db_doc.helpscout_document_title = 'Doc: {}'.format(article.name)
-                new_updated = article.updatedat
-                new_updated_ts = parse_dt(new_updated).timestamp()
+                new_updated = article.updatedat or article.createdat
+                new_updated_ts = parse_dt(new_updated).timestamp() if new_updated else _get_utc_timestamp()
                 if not created and db_doc.last_updated_ts:
                     new_updated_ts = db_doc.last_updated_ts \
                         if db_doc.last_updated_ts > new_updated_ts else new_updated_ts
