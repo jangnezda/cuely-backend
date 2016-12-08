@@ -41,9 +41,6 @@ def update_synchronization():
 @shared_task
 def collect_articles(requester):
     helpscout_client = init_helpscout_client(requester)
-    if not helpscout_client:
-        logger.warn("User %s is missing Helpscout API key", requester.username)
-        return
     docs_client = init_helpscout_docs_client(requester)
     if not docs_client:
         logger.warn("User %s is missing Helpscout Docs API key", requester.username)
