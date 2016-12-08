@@ -147,8 +147,8 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
                 if last_updated and \
                         conversation.get('last_updated_ts', 0) > last_conversation.get('last_updated_ts', 0):
                     last_conversation = conversation
-        # add sleep of one second to avoid breaking API rate limits
-        time.sleep(1.5)
+        # add sleep of three seconds to avoid breaking API rate limits
+        time.sleep(3)
         helpscout_client.clearstate()
 
     has_conversations = False
