@@ -189,7 +189,14 @@ STATIC_URL = '/static/'
 
 # Celery settings
 
-CELERY_IMPORTS = ('dataimporter.tasks.gdrive', 'dataimporter.tasks.intercom')
+CELERY_IMPORTS = (
+    'dataimporter.tasks.gdrive',
+    'dataimporter.tasks.intercom',
+    'dataimporter.tasks.help_scout',
+    'dataimporter.tasks.help_scout_docs',
+    'dataimporter.tasks.pipedrive',
+    'dataimporter.tasks.jira',
+)
 
 CELERY_BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
@@ -214,6 +221,10 @@ CELERYBEAT_SCHEDULE = {
     'sync-helpscout-docs': {
         'task': 'dataimporter.tasks.help_scout_docs.update_synchronization',
         'schedule': timedelta(seconds=500),
+    },
+    'sync-jira': {
+        'task': 'dataimporter.tasks.jira.update_synchronization',
+        'schedule': timedelta(seconds=580),
     }
 }
 

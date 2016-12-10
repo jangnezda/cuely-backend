@@ -74,6 +74,19 @@ class Document(models.Model):
     helpscout_document_keywords = JSONField(default=list)
     helpscout_document_status = models.CharField(max_length=50, blank=True, null=True)
     helpscout_document_public_link = models.CharField(max_length=500, blank=True, null=True)
+    jira_issue_key = models.CharField(max_length=50, blank=True, null=True)
+    jira_issue_title = models.CharField(max_length=500, blank=True, null=True)
+    jira_issue_status = models.CharField(max_length=50, blank=True, null=True)
+    jira_issue_type = models.CharField(max_length=50, blank=True, null=True)
+    jira_issue_priority = models.CharField(max_length=50, blank=True, null=True)
+    jira_issue_description = models.TextField(blank=True, null=True)
+    jira_issue_duedate = models.DateTimeField(blank=True, null=True, auto_now_add=False)
+    jira_issue_assignee = JSONField(default=dict)
+    jira_issue_reporter = JSONField(default=dict)
+    jira_issue_labels = JSONField(default=list)
+    jira_project_name = models.CharField(max_length=500, blank=True, null=True)
+    jira_project_key = models.CharField(max_length=50, blank=True, null=True)
+    jira_project_link = models.CharField(max_length=500, blank=True, null=True)
 
     def __str__(self):
         return str(self.id) if self.id else "Not saved to DB"

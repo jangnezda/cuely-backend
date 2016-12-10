@@ -1,13 +1,56 @@
 
 {% extends "base.html" %}
 {% load i18n %}
+{% load static %}
 
 {% block content %}
 {% if request.user.is_authenticated %}
 <div class="panel panel-default" style="width: 500px">
   <div class="panel-heading">JIRA OAuth setup</div>
   <div class="panel-body">
+		<p>
+		Your JIRA server has to be configured before attempting to integrate with Cuely, becuase by default, API access for external applications isn't allowed.
+		</p>
+		<p>
+		Please do the following in the Jira administration:
+			<ol>
+				<li>Go to <code>Applications -> Application links</code> and enter <code>https://{{ request.META.HTTP_HOST }}/</code> in the 'Create new link' field. You may get a warning that the address is not responding. Ignore it and click 'Continue'.</li>
+				<li>Input following data in the next screen:
+					<ul>
+						<li>Application Name: Cuely</li>
+						<li>Application Type: Generic Application</li>
+						<li>Service provider Name: Pipetop ApS</li>
+						<li>Consumer key: (a value that will be shared to Cuely, should be some random generated string)</li>
+						<li>Shared Secret: (a random string value)</li>
+						<li>Request Token URL: https://{{ request.META.HTTP_HOST }}/</li>
+						<li>Access token URL: https://{{ request.META.HTTP_HOST }}/</li>
+						<li>Authorize URL: https://{{ request.META.HTTP_HOST }}/</li>
+						<li>Create incoming link: (must be checked)</li>
+					</ul>
+				</li>
+				<li>Next configuration screen:
+					<ul>
+						<li>Consumer Key: (the same as on previous screen)</li>
+						<li>Consumer Name: Cuely search app</li>
+						<li>Public Key:
+							<br/><pre>
+-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDFzWFtX1f+zAoCc5/LlC4h1aeC
+Zl3MZkCZtlK6ub2jxAHHQhazFarurf6qbiF8EPAxr73Levt2uqI1nKEWU7POHQot
+CsFosoK3Uf86ffIarmdCLAhMCmuR93ezsBjiaNVdGU+TeBz7a5sXHtHk54HrE3EH
+kbtOL8SiEhHOZkD3FwIDAQAB
+-----END PUBLIC KEY-----
+							</pre>
+						</li>
+					</ul>
+				</li>
+				<li>Unfortunately, Jira developers forgot to add callaback url to previous configuration screen. Therefore, after confirming, the application link is set up, but not ready yet for Cuely integration. In the Application links list, click on the edit icon for Cuely app, then <code>Incoming Authentication</code> section and change <code>Consumer Callback URL</code> to <code>https://{{ request.META.HTTP_HOST }}/complete/jira-oauth/</code>. Now the application link is ready!</li>
+			</ol>
+		</p>
+		<hr style="height: 1px;background-color: black"/>
+		<p>Please input your Jira server address (e.g. https://mycompany.atlassian.net) and consumer key that you set up in Jira administration</p>
 		<form action="/complete/jira-oauth">
+			<input type="hidden" value="yes" name="in_auth_flow" />
 			<input type="text" value="" placeholder="Jira server address" name="jira_server" required size="60" /><br/><br/>
 			<input type="text" value="" placeholder="Consumer Key" name="consumer_key" required size="50" /><br/><br/>
 			<input type="submit" value="Start OAuth Flow">

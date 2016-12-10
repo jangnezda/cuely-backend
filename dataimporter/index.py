@@ -15,20 +15,27 @@ class DocumentIndex(AlgoliaIndex):
             'unordered(pipedrive_title)',
             'unordered(helpscout_title)',
             'unordered(helpscout_document_title)',
+            'unordered(jira_issue_title)',
             'owner_display_name',
             'modifier_display_name',
-            'helpscout_document_users',
             'unordered(path)',
             'intercom_company',
             'intercom_email',
+            'intercom_status',
+            'helpscout_company',
             'helpscout_emails',
+            'helpscout_mailbox',
+            'helpscout_document_users.name',
+            'helpscout_document_categories',
+            'helpscout_document_collection',
+            'helpscout_status',
+            'pipedrive_deal_status',
+            'helpscout_content',
             'content',
             'intercom_content',
             'pipedrive_content',
-            'helpscout_content',
+            'intercom_segments',
             'helpscout_document_content',
-            'helpscout_document_keywords',
-            'intercom_segments'
         ],
         # adjust ranking formula
         'ranking': [
@@ -107,5 +114,20 @@ class DocumentIndex(AlgoliaIndex):
         'helpscout_document_users',
         'helpscout_document_keywords',
         'helpscout_document_status',
-        'helpscout_document_public_link'
+        'helpscout_document_public_link',
+
+        # Jira
+        'jira_issue_key',
+        'jira_issue_title',
+        'jira_issue_status',
+        'jira_issue_type',
+        'jira_issue_priority',
+        'jira_issue_description',
+        'jira_issue_duedate',
+        'jira_issue_assignee',
+        'jira_issue_reporter',
+        'jira_issue_labels',
+        'jira_project_name',
+        'jira_project_key',
+        'jira_project_link'
     )
