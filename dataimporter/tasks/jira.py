@@ -69,10 +69,12 @@ def collect_issues(requester, sync_update=False):
                     logger.debug("Issue '%s' for user '%s' hasn't changed", issue.key, requester.username)
                     continue
             i = i + 1
+            db_issue.primary_keywords = JIRA_KEYWORDS['primary']
+            db_issue.secondary_keywords = JIRA_KEYWORDS['secondary']
             db_issue.last_updated = updated
             db_issue.last_updated_ts = updated_ts
             db_issue.webview_link = '{}/browse/{}'.format(project._options.get('server'), issue.key)
-            db_issue.jira_issue_title = 'Issue: {}'.format(issue.fields.summary)
+            db_issue.jira_issue_title = '{}: {}'.format(issue.key, issue.fields.summary)
             db_issue.jira_issue_status = issue.fields.status.name
             db_issue.jira_issue_type = issue.fields.issuetype.name
             db_issue.jira_issue_priority = issue.fields.priority.name
