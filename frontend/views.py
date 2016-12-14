@@ -124,7 +124,11 @@ def get_algolia_key(request):
             'appId': 'OPDWYH4IR4',
             'searchKey': '0b28a5913167a1618773992171c04344',
             'segmentKey': os.environ['SEGMENT_KEY'],
-            'segmentIdentified': ua.segment_identify
+            'segmentIdentified': ua.segment_identify,
+            'integrations': [
+                '-'.join(sa.provider.split('-')[:-1])
+                for sa in request.user.social_auth.all().order_by('provider')
+            ]
         })
     else:
         return HttpResponseForbidden()
