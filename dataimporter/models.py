@@ -91,10 +91,6 @@ class Document(models.Model):
     def __str__(self):
         return str(self.id) if self.id else "Not saved to DB"
 
-    def should_sync(self):
-        """ Don't sync to Algolia for processing docs/items """
-        return self.download_status != Document.PROCESSING
-
 
 class SocialAttributes(models.Model):
     start_page_token = models.CharField(max_length=100, blank=True, null=True)

@@ -4,7 +4,6 @@ import os
 
 class DocumentIndex(AlgoliaIndex):
     index_name = os.environ["ALGOLIA_INDEX_NAME"]
-    should_index = 'should_sync'
     settings = {
         # list of attributes that are used for searching
         'attributesToIndex': [
