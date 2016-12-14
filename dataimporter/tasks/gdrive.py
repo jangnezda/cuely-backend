@@ -233,7 +233,7 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             if not created:
                 if doc.download_status is Document.READY and \
                         (doc.last_synced is None or last_modified_on_server > doc.last_synced):
-                    doc.resync()
+                    doc.download_status = Document.PENDING
                     subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
             else:
                 subtask(download_gdrive_document).delay(doc, access_token, refresh_token)

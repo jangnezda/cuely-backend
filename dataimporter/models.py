@@ -91,10 +91,6 @@ class Document(models.Model):
     def __str__(self):
         return str(self.id) if self.id else "Not saved to DB"
 
-    def resync(self):
-        self.content = None
-        self.download_status = Document.PENDING
-
     def should_sync(self):
         """ Don't sync to Algolia for processing docs/items """
         return self.download_status != Document.PROCESSING
