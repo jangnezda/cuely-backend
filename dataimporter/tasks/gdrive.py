@@ -316,12 +316,11 @@ def download_gdrive_document(doc, access_token, refresh_token):
         content = cut_utf_string(response.decode('UTF-8'), 9000, step=10)
         doc.content = content
         doc.last_synced = _get_utc_timestamp()
-        doc.download_status = Document.READY
-        doc.save()
     except Exception as e:
         logger.error(e)
-        logger.error("Deleting file {},{} because it couldn't be exported".format(doc.title, doc.document_id))
-        doc.delete()
+    finally:
+        doc.download_status = Document.READY
+        doc.save()
 
 
 def get_google_tokens(user):
