@@ -204,7 +204,7 @@ CELERY_RESULT_BACKEND = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/1'
 CELERYBEAT_SCHEDULE = {
     'sync-gdrive': {
         'task': 'dataimporter.tasks.gdrive.update_synchronization',
-        'schedule': timedelta(seconds=60),
+        'schedule': timedelta(seconds=120),
     },
     'sync-intercom': {
         'task': 'dataimporter.tasks.intercom.update_synchronization',
@@ -216,7 +216,7 @@ CELERYBEAT_SCHEDULE = {
     },
     'sync-helpscout': {
         'task': 'dataimporter.tasks.help_scout.update_synchronization',
-        'schedule': timedelta(seconds=610),
+        'schedule': timedelta(seconds=900),
     },
     'sync-helpscout-docs': {
         'task': 'dataimporter.tasks.help_scout_docs.update_synchronization',
