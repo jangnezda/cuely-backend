@@ -53,52 +53,56 @@ def collect_issues(requester, sync_update=False):
             # only fetch those issues that were updated in the last day
             jql = "{} and updated > '-1d'".format(jql)
         i = 0
-        # setting maxResults to None fetches all issues (internally, jira library pages through whole dataset)
-        for issue in jira.search_issues(jql, maxResults=None):
-            db_issue, created = Document.objects.get_or_create(
-                jira_issue_key=issue.key,
-                requester=requester,
-                user_id=requester.id
-            )
-            logger.debug("Processing Jira issue %s for user %s", issue.key, requester.username)
-            updated = issue.fields.updated or issue.fields.created or _get_utc_timestamp()
-            updated_ts = parse_dt(updated).timestamp()
-            if not created and db_issue.last_updated_ts:
-                # compare timestamps and skip the deal if it hasn't been updated
-                if db_issue.last_updated_ts >= updated_ts:
-                    logger.debug("Issue '%s' for user '%s' hasn't changed", issue.key, requester.username)
-                    continue
-            i = i + 1
-            db_issue.primary_keywords = JIRA_KEYWORDS['primary']
-            db_issue.secondary_keywords = JIRA_KEYWORDS['secondary']
-            db_issue.last_updated = updated
-            db_issue.last_updated_ts = updated_ts
-            db_issue.webview_link = '{}/browse/{}'.format(project._options.get('server'), issue.key)
-            db_issue.jira_issue_title = '{}: {}'.format(issue.key, issue.fields.summary)
-            db_issue.jira_issue_status = issue.fields.status.name
-            db_issue.jira_issue_type = issue.fields.issuetype.name
-            db_issue.jira_issue_priority = issue.fields.priority.name
-            if issue.fields.description:
-                db_issue.jira_issue_description = cut_utf_string(issue.fields.description, 9000, 100)
-            db_issue.jira_issue_duedate = issue.fields.duedate
-            db_issue.jira_issue_labels = issue.fields.labels
-            db_issue.jira_issue_assignee = {
-                'name': issue.fields.assignee.displayName,
-                'avatar': issue.fields.assignee.raw.get('avatarUrls', {})
-            } if issue.fields.assignee else {}
-            reporter = issue.fields.reporter or issue.fields.creator
-            db_issue.jira_issue_reporter = {
-                'name': reporter.displayName,
-                'avatar': reporter.raw.get('avatarUrls', {})
-            }
-            db_issue.jira_project_name = project_name
-            db_issue.jira_project_key = project_key
-            db_issue.jira_project_link = project_url
-            db_issue.download_status = Document.READY
-            db_issue.save()
-            if i % 10 == 0:
-                # add sleep of one second to avoid breaking API rate limits
-                time.sleep(1)
+        old_i = -1
+        while True:
+            # manually page through results (using 'maxResults=None' should page automatically, but it doesn't work)
+            if i == old_i:
+                break
+            old_i = i
+            for issue in jira.search_issues(jql, startAt=i, maxResults=25):
+                i = i + 1
+                db_issue, created = Document.objects.get_or_create(
+                    jira_issue_key=issue.key,
+                    requester=requester,
+                    user_id=requester.id
+                )
+                logger.debug("Processing Jira issue %s for user %s", issue.key, requester.username)
+                updated = issue.fields.updated or issue.fields.created or _get_utc_timestamp()
+                updated_ts = parse_dt(updated).timestamp()
+                if not created and db_issue.last_updated_ts:
+                    # compare timestamps and skip the deal if it hasn't been updated
+                    if db_issue.last_updated_ts >= updated_ts:
+                        logger.debug("Issue '%s' for user '%s' hasn't changed", issue.key, requester.username)
+                        continue
+                i = i + 1
+                db_issue.primary_keywords = JIRA_KEYWORDS['primary']
+                db_issue.secondary_keywords = JIRA_KEYWORDS['secondary']
+                db_issue.last_updated = updated
+                db_issue.last_updated_ts = updated_ts
+                db_issue.webview_link = '{}/browse/{}'.format(project._options.get('server'), issue.key)
+                db_issue.jira_issue_title = '{}: {}'.format(issue.key, issue.fields.summary)
+                db_issue.jira_issue_status = issue.fields.status.name
+                db_issue.jira_issue_type = issue.fields.issuetype.name
+                db_issue.jira_issue_priority = issue.fields.priority.name
+                if issue.fields.description:
+                    db_issue.jira_issue_description = cut_utf_string(issue.fields.description, 9000, 100)
+                db_issue.jira_issue_duedate = issue.fields.duedate
+                db_issue.jira_issue_labels = issue.fields.labels
+                db_issue.jira_issue_assignee = {
+                    'name': issue.fields.assignee.displayName,
+                    'avatar': issue.fields.assignee.raw.get('avatarUrls', {})
+                } if issue.fields.assignee else {}
+                reporter = issue.fields.reporter or issue.fields.creator
+                db_issue.jira_issue_reporter = {
+                    'name': reporter.displayName,
+                    'avatar': reporter.raw.get('avatarUrls', {})
+                }
+                db_issue.jira_project_name = project_name
+                db_issue.jira_project_key = project_key
+                db_issue.jira_project_link = project_url
+                db_issue.download_status = Document.READY
+                db_issue.save()
+            time.sleep(2)
 
         # add sleep of five seconds to avoid breaking API rate limits
         time.sleep(5)
