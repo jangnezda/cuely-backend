@@ -52,6 +52,7 @@ def collect_issues(requester, sync_update=False):
         if sync_update:
             # only fetch those issues that were updated in the last day
             jql = "{} and updated > '-1d'".format(jql)
+        jql = '{} order by key'.format(jql)
         i = 0
         old_i = -1
         while True:
