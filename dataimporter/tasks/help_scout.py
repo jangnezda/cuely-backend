@@ -222,7 +222,7 @@ def process_conversations(users, conversations, helpscout_client):
                 if uid and uid in users and not is_customer:
                     active_users[uid] = users[uid]
 
-            content['conversations'].insert(0, c)
+            content['conversations'].append(c)
         helpscout_client.clearstate()
         time.sleep(2)
 
