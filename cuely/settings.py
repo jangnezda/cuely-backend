@@ -201,6 +201,15 @@ CELERY_IMPORTS = (
 CELERY_BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 CELERY_IGNORE_RESULT = True
+# define routing for integration tasks (any other task will go to the default 'celery' queue)
+CELERY_ROUTES = {
+    'dataimporter.tasks.gdrive': {'queue': 'gdrive'},
+    'dataimporter.tasks.intercom': {'queue': 'intercom'},
+    'dataimporter.tasks.help_scout': {'queue': 'help_scout'},
+    'dataimporter.tasks.help_scout_docs': {'queue': 'help_scout_docs'},
+    'dataimporter.tasks.pipedrive': {'queue': 'pipedrive'},
+    'dataimporter.tasks.jira': {'queue': 'jira'}
+}
 CELERYBEAT_SCHEDULE = {
     'sync-gdrive': {
         'task': 'dataimporter.tasks.gdrive.update_synchronization',

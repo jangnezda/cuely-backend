@@ -10,7 +10,7 @@ from celery import shared_task, subtask
 from oauth2client.client import GoogleCredentials
 
 from dataimporter.models import Document, SocialAttributes
-from dataimporter.task_util import should_sync, cut_utf_string
+from dataimporter.task_util import should_sync, cut_utf_string, queue_full
 import logging
 logger = logging.getLogger(__name__)
 
@@ -108,6 +108,10 @@ def update_synchronization():
     Gdrive-only at the moment.
     """
     logger.debug("Update synchronizations started")
+    if queue_full(__name__.split('.')[-1]):
+        logger.debug("Gdrive queue is full, skipping this beat")
+        return
+
     for sa in SocialAttributes.objects.filter(start_page_token__isnull=False):
         if should_sync(sa.user, 'google-oauth2', 'tasks.gdrive'):
             if sa.user.social_auth.filter(provider='google-oauth2').first():
