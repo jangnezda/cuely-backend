@@ -200,7 +200,7 @@ CELERY_IMPORTS = (
 
 CELERY_BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
-CELERY_RESULT_BACKEND = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/1'
+CELERY_IGNORE_RESULT = True
 CELERYBEAT_SCHEDULE = {
     'sync-gdrive': {
         'task': 'dataimporter.tasks.gdrive.update_synchronization',
