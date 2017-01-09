@@ -15,7 +15,8 @@ from intercom import Event, Intercom, User, Admin, Company, Segment, Count,\
     Conversation, AuthenticationError, ResourceNotFound
 
 from dataimporter.models import Document
-from dataimporter.task_util import should_sync, queue_full
+from dataimporter.task_util import should_sync
+from cuely.queue_util import queue_full
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)

@@ -1,5 +1,3 @@
-import os
-import redis
 from celery.task.control import inspect
 from dataimporter.models import User
 
@@ -44,11 +42,6 @@ def should_sync(user, provider, package):
         return not any(social.extra_data.get(x) in keys for x in auth_fields)
     else:
         return True
-
-
-def queue_full(name, treshold=100):
-    r = redis.StrictRedis(host=os.environ['REDIS_ENDPOINT'], port=6379, db=0)
-    return r.llen(name) > treshold
 
 
 def cut_utf_string(s, bytes_len_max, step=1):

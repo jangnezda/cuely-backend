@@ -10,7 +10,8 @@ from celery import shared_task, subtask
 from oauth2client.client import GoogleCredentials
 
 from dataimporter.models import Document, SocialAttributes
-from dataimporter.task_util import should_sync, cut_utf_string, queue_full
+from dataimporter.task_util import should_sync, cut_utf_string
+from cuely.queue_util import queue_full
 import logging
 logger = logging.getLogger(__name__)
 

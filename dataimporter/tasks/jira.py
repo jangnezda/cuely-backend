@@ -8,7 +8,8 @@ from dateutil.parser import parse as parse_dt
 from celery import shared_task
 
 from django.conf import settings
-from dataimporter.task_util import should_sync, cut_utf_string, queue_full
+from dataimporter.task_util import should_sync, cut_utf_string
+from cuely.queue_util import queue_full
 from dataimporter.models import Document
 from social.apps.django_app.default.models import UserSocialAuth
 import logging

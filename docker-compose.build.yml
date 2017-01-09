@@ -10,23 +10,7 @@ services:
     depends_on:
       - db
       - redis
-    environment:
-      - CUELY_DEBUG=True
-      - GDRIVE_API_CLIENT_ID=961309221806-3lbfafbq6pommtpru507452kr6emvn7k.apps.googleusercontent.com
-      - GDRIVE_API_CLIENT_SECRET=PKGtbWLFbo-C51PrzVOaYTTB
-      - ALGOLIA_APPLICATION_ID=OPDWYH4IR4
-      - ALGOLIA_API_KEY=9fadc83917a0c84942b1432bb98317fa
-      - ALGOLIA_INDEX_NAME=cuely_dev_documents
-      - MYSQL_ENDPOINT=db
-      - REDIS_ENDPOINT=redis
-      - MYSQL_USER=cuely-backend
-      - MYSQL_PASSWORD=cuely-backend-password
-      - SEGMENT_KEY=CzbltQu3JSHIP6co82fYPTfBLDrHsCIC
-      - INTERCOM_API_APP_ID=t4ll5bb1
-      - INTERCOM_API_CLIENT_ID=e61a4de4-ab3f-45be-a6a4-a75b506de67b
-      - INTERCOM_API_CLIENT_SECRET=e836f3c8-a63d-4781-810e-9761028af063
-      - OPBEAT_APPLICATION_ID=c8cca69ab7
-      - OPBEAT_TOKEN=7d0e3d206f858fbaeddb3ca0be74a7baf4280e9e
+    env_file: .env
 
   db:
     image: mysql
@@ -40,59 +24,70 @@ services:
   redis:
     image: redis
 
-  worker:
+  worker_gdrive:
     build: .
     volumes:
       - .:/usr/src/app/
     depends_on:
       - db
       - redis
-    environment:
-      - CUELY_DEBUG=True
-      - GDRIVE_API_CLIENT_ID=961309221806-3lbfafbq6pommtpru507452kr6emvn7k.apps.googleusercontent.com
-      - GDRIVE_API_CLIENT_SECRET=PKGtbWLFbo-C51PrzVOaYTTB
-      - ALGOLIA_APPLICATION_ID=OPDWYH4IR4
-      - ALGOLIA_API_KEY=9fadc83917a0c84942b1432bb98317fa
-      - ALGOLIA_INDEX_NAME=cuely_dev_documents
-      - C_FORCE_ROOT=1
-      - CELERY_BROKER_REDIS_URL=redis
-      - CELERY_RESULTS_REDIS_URL=redis
-      - MYSQL_ENDPOINT=db
-      - REDIS_ENDPOINT=redis
-      - MYSQL_USER=cuely-backend
-      - MYSQL_PASSWORD=cuely-backend-password
-      - INTERCOM_API_APP_ID=t4ll5bb1
-      - INTERCOM_API_CLIENT_ID=e61a4de4-ab3f-45be-a6a4-a75b506de67b
-      - INTERCOM_API_CLIENT_SECRET=e836f3c8-a63d-4781-810e-9761028af063
-      - OPBEAT_APPLICATION_ID=c8cca69ab7
-      - OPBEAT_TOKEN=7d0e3d206f858fbaeddb3ca0be74a7baf4280e9e
-    command: /usr/src/app/start_worker.sh
+    env_file: .env
+    command: /usr/src/app/start_worker.sh gdrive
+
+  worker_intercom:
+    build: .
+    volumes:
+      - .:/usr/src/app/
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    command: /usr/src/app/start_worker.sh intercom
+
+  worker_help_scout:
+    build: .
+    volumes:
+      - .:/usr/src/app/
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    command: /usr/src/app/start_worker.sh help_scout
+
+  worker_help_scout_docs:
+    build: .
+    volumes:
+      - .:/usr/src/app/
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    command: /usr/src/app/start_worker.sh help_scout_docs
+
+  worker_pipedrive:
+    build: .
+    volumes:
+      - .:/usr/src/app/
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    command: /usr/src/app/start_worker.sh pipedrive
+
+  worker_jira:
+    build: .
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    command: /usr/src/app/start_worker.sh jira
 
   beat:
     build: .
-    volumes:
-      - .:/usr/src/app/
     depends_on:
       - db
       - redis
-    environment:
-      - CUELY_DEBUG=True
-      - GDRIVE_API_CLIENT_ID=961309221806-3lbfafbq6pommtpru507452kr6emvn7k.apps.googleusercontent.com
-      - GDRIVE_API_CLIENT_SECRET=PKGtbWLFbo-C51PrzVOaYTTB
-      - ALGOLIA_APPLICATION_ID=OPDWYH4IR4
-      - ALGOLIA_API_KEY=9fadc83917a0c84942b1432bb98317fa
-      - ALGOLIA_INDEX_NAME=cuely_dev_documents
-      - C_FORCE_ROOT=1
-      - CELERY_BROKER_REDIS_URL=redis
-      - CELERY_RESULTS_REDIS_URL=redis
-      - MYSQL_ENDPOINT=db
-      - REDIS_ENDPOINT=redis
-      - MYSQL_USER=cuely-backend
-      - MYSQL_PASSWORD=cuely-backend-password
-      - INTERCOM_API_CLIENT_ID=e61a4de4-ab3f-45be-a6a4-a75b506de67b
-      - INTERCOM_API_CLIENT_SECRET=e836f3c8-a63d-4781-810e-9761028af063
-      - OPBEAT_APPLICATION_ID=c8cca69ab7
-      - OPBEAT_TOKEN=7d0e3d206f858fbaeddb3ca0be74a7baf4280e9e
+    env_file: .env
     command: /usr/src/app/start_beat.sh
 
   ngrok:

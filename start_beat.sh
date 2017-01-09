@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 # start celery 'beat' - a scheduler for periodic tasks
 

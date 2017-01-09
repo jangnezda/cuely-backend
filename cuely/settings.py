@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 
 import os
 from datetime import timedelta
+from kombu import Queue
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -188,7 +189,13 @@ SESSION_COOKIE_AGE = 15552000 # 6 months
 STATIC_URL = '/static/'
 
 # Celery settings
-
+# ---------------
+# A note on queueing:
+# We define queues for every integration (gdrive, pipedrive, ...) and one 'default' queue that may be
+# used for non-integration specific tasks. The 'default' queue is also used when one of the
+# integration-specific queues becomes full. There are workers that are dedicated to each of the queues,
+# however each worker listens to 'default' queue as well. This way, idle workers help dedicated workers
+# when load on specific integration becomes too high.
 CELERY_IMPORTS = (
     'dataimporter.tasks.gdrive',
     'dataimporter.tasks.intercom',
@@ -201,15 +208,22 @@ CELERY_IMPORTS = (
 CELERY_BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
 CELERY_IGNORE_RESULT = True
+CELERY_CREATE_MISSING_QUEUES = True
 # define routing for integration tasks (any other task will go to the default 'celery' queue)
-CELERY_ROUTES = {
-    'dataimporter.tasks.gdrive': {'queue': 'gdrive'},
-    'dataimporter.tasks.intercom': {'queue': 'intercom'},
-    'dataimporter.tasks.help_scout': {'queue': 'help_scout'},
-    'dataimporter.tasks.help_scout_docs': {'queue': 'help_scout_docs'},
-    'dataimporter.tasks.pipedrive': {'queue': 'pipedrive'},
-    'dataimporter.tasks.jira': {'queue': 'jira'}
-}
+CELERY_ROUTES = ('cuely.celery.IntegrationsRouter', )
+CELERY_DEFAULT_QUEUE = 'default'
+CELERY_DEFAULT_ROUTING_KEY = 'default'
+CELERY_DEFAULT_EXCHANGE = 'default'
+CELERY_DEFAULT_EXCHANGE_TYPE = 'direct'
+CELERY_QUEUES = (
+    Queue('default'),
+    Queue('gdrive', routing_key='gdrive'),
+    Queue('intercom', routing_key='intercom'),
+    Queue('help_scout', routing_key='help_scout'),
+    Queue('help_scout_docs', routing_key='help_scout_docs'),
+    Queue('pipedrive', routing_key='pipedrive'),
+    Queue('jira', routing_key='jira')
+)
 CELERYBEAT_SCHEDULE = {
     'sync-gdrive': {
         'task': 'dataimporter.tasks.gdrive.update_synchronization',
@@ -273,6 +287,11 @@ LOGGING = {
             'propagate': True,
         },
         'frontend': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'cuely': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
