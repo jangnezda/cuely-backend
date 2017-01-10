@@ -10,8 +10,7 @@ from celery import shared_task, subtask
 from oauth2client.client import GoogleCredentials
 
 from dataimporter.models import Document, SocialAttributes
-from dataimporter.task_util import should_sync, cut_utf_string
-from cuely.queue_util import queue_full
+from dataimporter.task_util import should_sync, should_queue, cut_utf_string
 import logging
 logger = logging.getLogger(__name__)
 
@@ -103,16 +102,13 @@ def start_synchronization(user):
 
 
 @shared_task
+@should_queue
 def update_synchronization():
     """
     Check for new/updated files in external systems for all users. Should be called periodically after initial syncing.
     Gdrive-only at the moment.
     """
     logger.debug("Update synchronizations started")
-    if queue_full(__name__.split('.')[-1]):
-        logger.debug("Gdrive queue is full, skipping this beat")
-        return
-
     for sa in SocialAttributes.objects.filter(start_page_token__isnull=False):
         if should_sync(sa.user, 'google-oauth2', 'tasks.gdrive'):
             if sa.user.social_auth.filter(provider='google-oauth2').first():

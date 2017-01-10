@@ -15,8 +15,7 @@ from intercom import Event, Intercom, User, Admin, Company, Segment, Count,\
     Conversation, AuthenticationError, ResourceNotFound
 
 from dataimporter.models import Document
-from dataimporter.task_util import should_sync
-from cuely.queue_util import queue_full
+from dataimporter.task_util import should_sync, should_queue
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
@@ -36,12 +35,9 @@ def start_synchronization(user, update=False):
 
 
 @shared_task
+@should_queue
 def update_synchronization():
     """ Run re-syncing of user's data in intercom. """
-    if queue_full(__name__.split('.')[-1]):
-        logger.debug("intercom queue is full, skipping this beat")
-        return
-
     for us in UserSocialAuth.objects.filter(provider='intercom-apikeys'):
         start_synchronization(user=us.user, update=True)
 

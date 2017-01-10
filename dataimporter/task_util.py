@@ -1,5 +1,9 @@
+from functools import wraps
 from celery.task.control import inspect
 from dataimporter.models import User
+from cuely.queue_util import queues_full
+import logging
+logger = logging.getLogger(__name__)
 
 
 auth_fields = ['api_key', 'access_token', 'oauth_toke']
@@ -42,6 +46,20 @@ def should_sync(user, provider, package):
         return not any(social.extra_data.get(x) in keys for x in auth_fields)
     else:
         return True
+
+
+def should_queue(fn):
+    """ Decorator that checks for queue length and does nothing in case the queue is full """
+    @wraps(fn)
+    def check_queue(*args, **kwargs):
+        queue = fn.__module__.split('.')[-1]
+        logger.debug("module/queue %s", queue)
+        # check if 'default' queue is full, as well
+        if queues_full([queue, 'default']):
+            logger.debug("%s queue is full or default queue is full, skipping this beat", queue)
+            return
+        return fn(*args, **kwargs)
+    return check_queue
 
 
 def cut_utf_string(s, bytes_len_max, step=1):

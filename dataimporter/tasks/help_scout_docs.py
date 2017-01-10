@@ -8,8 +8,7 @@ from dateutil.parser import parse as parse_dt
 from celery import shared_task, subtask
 
 import helpscout
-from dataimporter.task_util import should_sync, cut_utf_string
-from cuely.queue_util import queue_full
+from dataimporter.task_util import should_sync, should_queue, cut_utf_string
 from dataimporter.models import Document
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
@@ -30,15 +29,12 @@ def start_synchronization(user):
 
 
 @shared_task
+@should_queue
 def update_synchronization():
     """
     Run sync/update of all users' deals data in pipedrive.
     Should be run periodically to keep the data fresh in our db.
     """
-    if queue_full(__name__.split('.')[-1]):
-        logger.debug("help_scout_docs queue is full, skipping this beat")
-        return
-
     for us in UserSocialAuth.objects.filter(provider='helpscout-docs-apikeys'):
         start_synchronization(user=us.user)
 

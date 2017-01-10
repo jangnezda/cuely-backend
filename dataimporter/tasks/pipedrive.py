@@ -9,8 +9,7 @@ from datetime import datetime, timezone
 from dateutil.parser import parse as parse_dt
 from celery import shared_task
 
-from dataimporter.task_util import should_sync
-from cuely.queue_util import queue_full
+from dataimporter.task_util import should_sync, should_queue
 from dataimporter.models import Document
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
@@ -31,15 +30,12 @@ def start_synchronization(user):
 
 
 @shared_task
+@should_queue
 def update_synchronization():
     """
     Run sync/update of all users' deals data in pipedrive.
     Should be run periodically to keep the data fresh in our db.
     """
-    if queue_full(__name__.split('.')[-1]):
-        logger.debug("pipedrive queue is full, skipping this beat")
-        return
-
     for us in UserSocialAuth.objects.filter(provider='pipedrive-apikeys'):
         start_synchronization(user=us.user)
 
