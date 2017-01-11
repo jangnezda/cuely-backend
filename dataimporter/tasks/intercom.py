@@ -21,7 +21,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 INTERCOM_KEYWORDS = {
-    'primary': 'inter,intercom',
+    'primary': 'intercom,inter',
     'secondary': 'user,event,conversation,chat'
 }
 
