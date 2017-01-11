@@ -154,7 +154,7 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
 
     has_conversations = False
     if db_customer.helpscout_content:
-        has_conversations = len(json.loads(db_customer.helpscout_content).get('conversations', [])) > 0
+        has_conversations = len(db_customer.helpscout_content.get('conversations', [])) > 0
 
     if has_conversations and db_customer.last_updated_ts and db_customer.helpscout_status and \
             db_customer.last_updated_ts >= last_conversation.get('last_updated_ts', 0):
@@ -178,9 +178,9 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
             conversation_emails = conversation_emails.union(db_customer.helpscout_emails.split(', '))
         db_customer.helpscout_emails = ', '.join(filter(None, conversation_emails))
 
-    # build helpscout content json
+    # build helpscout content
     content = process_conversations(users, conversations, helpscout_client)
-    db_customer.helpscout_content = json.dumps(content)
+    db_customer.helpscout_content = content
     db_customer.download_status = Document.READY
     db_customer.last_synced = _get_utc_timestamp()
     db_customer.save()

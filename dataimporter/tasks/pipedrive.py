@@ -3,7 +3,6 @@ Pipedrive API integration. At the moment there is no special optimization or wor
 we simply list all deals and store them to database.
 """
 from pypedriver import Client
-import json
 import time
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_dt
@@ -78,7 +77,7 @@ def collect_deals(requester):
         db_deal.webview_link = 'https://{}.pipedrive.com/deal/{}'.format(org_domain, deal.id)
         db_deal.last_updated = parse_dt(deal.update_time).isoformat() + 'Z'
         db_deal.last_updated_ts = parse_dt(deal.update_time).timestamp()
-        db_deal.pipedrive_content = json.dumps(build_deal_content(deal, users, org_domain, pipe_client))
+        db_deal.pipedrive_content = build_deal_content(deal, users, org_domain, pipe_client)
         db_deal.last_synced = _get_utc_timestamp()
         db_deal.download_status = Document.READY
         db_deal.save()
@@ -87,7 +86,7 @@ def collect_deals(requester):
 
 
 def build_deal_content(deal, users, org_domain, pipe_client):
-    # build content json: contacts, users and activities
+    # build content: contacts, users and activities
     content = {
         'contacts': [],
         'users': [],
