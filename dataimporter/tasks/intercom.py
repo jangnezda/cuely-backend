@@ -21,7 +21,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 INTERCOM_KEYWORDS = {
-    'primary': 'inter,intercom',
+    'primary': 'intercom,inter',
     'secondary': 'user,event,conversation,chat'
 }
 
@@ -150,7 +150,7 @@ def process_user(requester, user, db_user):
         conversations = conversations[:-1]
 
     content['conversations'] = conversations
-    db_user.intercom_content = json.dumps(content)
+    db_user.intercom_content = content
 
     # companies ... only use first one, add others when/if necessary
     if user['companies']:

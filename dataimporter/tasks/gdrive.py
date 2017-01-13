@@ -1,6 +1,5 @@
 import os
 import httplib2
-import json
 import re
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_date
@@ -221,7 +220,7 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             doc.icon_link = item.get('iconLink')
             doc.thumbnail_link = item.get('thumbnailLink')
             doc.last_updated = item.get('modifiedTime')
-            doc.path = json.dumps(path)
+            doc.path = path
             last_modified_on_server = parse_date(doc.last_updated)
             doc.last_updated_ts = last_modified_on_server.timestamp()
             doc.modifier_display_name = item.get('lastModifyingUser', {}).get('displayName')
