@@ -26,6 +26,9 @@ def get_api_creds(username, provider):
 
 def get_active_api_keys(provider, package):
     active_tasks = inspect().active()
+    if not active_tasks:
+        return []
+
     active_keys = []
     for key, task_list in (active_tasks.items() or []):
         for task in (task_list or []):
