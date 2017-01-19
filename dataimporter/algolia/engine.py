@@ -70,7 +70,7 @@ class AlgoliaEngine(object):
         tmp = {}
         if with_id:
             tmp['objectID'] = instance.pk
-        for field in fields:
+        for field in [x for x in fields if hasattr(instance, x)]:
             attr = getattr(instance, field)
             if callable(attr):
                 attr = attr()

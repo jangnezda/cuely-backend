@@ -92,24 +92,22 @@ def collect_users(requester, sync_update=False):
         algolia_engine.sync(db_user, add=created)
         # can't pickle whole Intercom user object, because it contains helper methods like 'load', 'find', etc.
         # therefore, let's just copy the data we're interested in
-        user_cache[u.id] = {
+        user_cache[u.id] = ({
             'id': u.id,
             'app_id': u.app_id,
             'name': u.name,
             'segments': list(map(lambda x: x.id, u.segments)),
             'companies': list(map(lambda x: x.id, u.companies)),
             'old_updated_ts': old_updated_ts
-        }
+        }, db_user)
         if i % 50 == 0:
             # quick hack to avoid Intercom api rate limits
             time.sleep(2)
 
     # fetch user's conversations and events
     for uid, udata in user_cache.items():
-        db_user = Document.objects.filter(user_id=requester.id, intercom_user_id=uid).first()
-        if db_user:
-            subtask(process_user).delay(requester, udata, db_user)
-            time.sleep(3)
+        subtask(process_user).delay(requester, udata[0], udata[1])
+        time.sleep(3)
 
 
 @shared_task

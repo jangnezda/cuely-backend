@@ -145,8 +145,8 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
                 if last_updated:
                     conversation['last_updated_ts'] = parse_dt(last_updated).timestamp()
                 conversations.append(conversation)
-                if bc.customer and 'email' in bc.customer:
-                    conversation_emails.add(bc.customer.get('email'))
+                if bc.customer:
+                    conversation_emails = conversation_emails.union(bc.customer.get('emails') or [])
                 if last_updated and \
                         conversation.get('last_updated_ts', 0) > last_conversation.get('last_updated_ts', 0):
                     last_conversation = conversation
@@ -154,12 +154,7 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
         time.sleep(3)
         helpscout_client.clearstate()
 
-    has_conversations = False
-    if db_customer.helpscout_content:
-        has_conversations = len(db_customer.helpscout_content.get('conversations', [])) > 0
-
-    if has_conversations and db_customer.last_updated_ts and db_customer.helpscout_status and \
-            db_customer.last_updated_ts >= last_conversation.get('last_updated_ts', 0):
+    if db_customer.last_updated_ts >= last_conversation.get('last_updated_ts', 0):
         logger.info(
             "Helpscout customer '%s' for user '%s' seems unchanged, skipping further processing",
             db_customer.helpscout_name, requester.username
@@ -176,8 +171,6 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
     db_customer.helpscout_status = last_conversation.get('status')
     db_customer.helpscout_assigned = last_conversation.get('owner') is not None
     if conversation_emails:
-        if db_customer.helpscout_emails:
-            conversation_emails = conversation_emails.union(db_customer.helpscout_emails.split(', '))
         db_customer.helpscout_emails = ', '.join(filter(None, conversation_emails))
 
     # build helpscout content
