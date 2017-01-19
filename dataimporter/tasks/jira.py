@@ -10,6 +10,7 @@ from celery import shared_task
 from django.conf import settings
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string
 from dataimporter.models import Document
+from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
@@ -104,6 +105,7 @@ def collect_issues(requester, sync_update=False):
                 db_issue.jira_project_link = project_url
                 db_issue.download_status = Document.READY
                 db_issue.save()
+                algolia_engine.sync(db_issue, add=created)
             time.sleep(2)
 
         # add sleep of five seconds to avoid breaking API rate limits

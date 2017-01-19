@@ -9,6 +9,7 @@ from celery import shared_task, subtask
 from oauth2client.client import GoogleCredentials
 
 from dataimporter.models import Document, SocialAttributes
+from dataimporter.algolia.engine import algolia_engine
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string
 import logging
 logger = logging.getLogger(__name__)
@@ -239,6 +240,7 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
                 subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
 
             doc.save()
+            algolia_engine.sync(doc, add=created)
 
         page_token = files.get('nextPageToken')
         if not page_token:
@@ -321,6 +323,7 @@ def download_gdrive_document(doc, access_token, refresh_token):
     finally:
         doc.download_status = Document.READY
         doc.save()
+        algolia_engine.sync(doc, add=False)
 
 
 def get_google_tokens(user):
