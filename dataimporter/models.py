@@ -104,3 +104,15 @@ class UserAttributes(models.Model):
     jira_consumer_key = models.CharField(max_length=500, blank=True, null=True)
     jira_oauth_token = models.CharField(max_length=500, blank=True, null=True)
     jira_oauth_verifier = models.CharField(max_length=500, blank=True, null=True)
+
+
+class AlgoliaIndex(models.Model):
+    DOCUMENT = 0
+    MODEL_TYPE = (
+        (DOCUMENT, 'Document'),
+    )
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    name = models.CharField(max_length=100, blank=False, null=False, unique=True)
+    settings = JSONField(default=dict)
+    model_type = models.IntegerField(choices=MODEL_TYPE, default=DOCUMENT)
