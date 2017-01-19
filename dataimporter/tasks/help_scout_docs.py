@@ -10,6 +10,7 @@ from celery import shared_task, subtask
 import helpscout
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string
 from dataimporter.models import Document
+from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
@@ -110,6 +111,8 @@ def collect_articles(requester):
                 db_doc.helpscout_document_users = \
                     [users.get(x) for x in set([article.createdby, article.updatedby])] if users else []
                 db_doc.save()
+                algolia_engine.sync(db_doc, add=created)
+
                 subtask(process_article).delay(requester, db_doc, cats)
                 time.sleep(1)
 
@@ -128,6 +131,7 @@ def process_article(requester, db_doc, cats):
     db_doc.download_status = Document.READY
     db_doc.last_synced = _get_utc_timestamp()
     db_doc.save()
+    algolia_engine.sync(db_doc, add=False)
 
 
 def init_helpscout_client(user):

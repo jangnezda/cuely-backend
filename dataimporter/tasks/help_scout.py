@@ -11,6 +11,7 @@ from celery import shared_task, subtask
 import helpscout
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string
 from dataimporter.models import Document
+from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
@@ -101,6 +102,7 @@ def collect_customers(requester):
             db_customer.helpscout_company = customer.organization
             db_customer.helpscout_emails = ', '.join(customer.emails) if customer.emails else None
             db_customer.save()
+            algolia_engine.sync(db_customer, add=created)
             subtask(process_customer).delay(requester, db_customer, mailboxes, folders, users)
             # add sleep of one second to avoid breaking API rate limits
             time.sleep(2)
@@ -184,6 +186,7 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
     db_customer.download_status = Document.READY
     db_customer.last_synced = _get_utc_timestamp()
     db_customer.save()
+    algolia_engine.sync(db_customer, add=False)
 
 
 def format_person(person):

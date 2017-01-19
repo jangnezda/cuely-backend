@@ -24,6 +24,16 @@ services:
   redis:
     image: redis
 
+  ngrok:
+    image: wernight/ngrok
+    depends_on:
+      - backend
+    ports:
+      - 4040:4040
+    links:
+      - backend
+    command: ngrok http backend:8000 --subdomain cuely-dev --authtoken 3C5H1pHskZErUJV4SNxdp_7RCWDASFjjNWDbDNuZ1DG -log stdout
+
   worker_gdrive:
     image: cuely-backend
     depends_on:
@@ -87,13 +97,3 @@ services:
       - redis
     env_file: .env
     command: /usr/src/app/start_beat.sh
-
-  ngrok:
-    image: wernight/ngrok
-    depends_on:
-      - backend
-    ports:
-      - 4040:4040
-    links:
-      - backend
-    command: ngrok http backend:8000 --subdomain cuely-dev --authtoken 3C5H1pHskZErUJV4SNxdp_7RCWDASFjjNWDbDNuZ1DG -log stdout

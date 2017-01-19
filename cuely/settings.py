@@ -38,7 +38,6 @@ INSTALLED_APPS = [
     'frontend.apps.FrontendConfig',
     'social.apps.django_app.default',
     'bootstrap3',
-    'django.contrib.algoliasearch',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

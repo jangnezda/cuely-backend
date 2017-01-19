@@ -15,6 +15,7 @@ from intercom import Event, Intercom, User, Admin, Company, Segment, Count,\
     Conversation, AuthenticationError, ResourceNotFound
 
 from dataimporter.models import Document
+from dataimporter.algolia.engine import algolia_engine
 from dataimporter.task_util import should_sync, should_queue
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
@@ -88,6 +89,7 @@ def collect_users(requester, sync_update=False):
         db_user.intercom_session_count = u.session_count
         db_user.intercom_avatar_link = u.avatar.image_url
         db_user.save()
+        algolia_engine.sync(db_user, add=created)
         # can't pickle whole Intercom user object, because it contains helper methods like 'load', 'find', etc.
         # therefore, let's just copy the data we're interested in
         user_cache[u.id] = {
@@ -175,6 +177,7 @@ def process_user(requester, user, db_user):
     db_user.last_synced = _get_utc_timestamp()
     db_user.download_status = Document.READY
     db_user.save()
+    algolia_engine.sync(db_user, add=False)
 
 
 def process_conversations(user_id, user_name):

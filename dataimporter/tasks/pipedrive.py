@@ -10,6 +10,7 @@ from celery import shared_task
 
 from dataimporter.task_util import should_sync, should_queue
 from dataimporter.models import Document
+from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
@@ -81,6 +82,7 @@ def collect_deals(requester):
         db_deal.last_synced = _get_utc_timestamp()
         db_deal.download_status = Document.READY
         db_deal.save()
+        algolia_engine.sync(db_deal, add=created)
         # add sleep of one second to avoid breaking API rate limits
         time.sleep(1)
 
