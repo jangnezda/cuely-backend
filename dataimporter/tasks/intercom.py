@@ -88,6 +88,7 @@ def collect_users(requester, sync_update=False):
         db_user.secondary_keywords = INTERCOM_KEYWORDS['secondary']
         db_user.intercom_session_count = u.session_count
         db_user.intercom_avatar_link = u.avatar.image_url
+        db_user.intercom_content = None
         db_user.save()
         algolia_engine.sync(db_user, add=created)
         # can't pickle whole Intercom user object, because it contains helper methods like 'load', 'find', etc.
