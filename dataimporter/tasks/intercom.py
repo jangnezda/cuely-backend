@@ -72,8 +72,8 @@ def collect_users(requester, sync_update=False):
             user_id=requester.id
         )
         new_updated_ts = u.__dict__.get('updated_at') or u.__dict__.get('last_request_at')
-        if sync_update and (new_updated_ts < datetime.now().timestamp() - 12 * 3600):
-            # user has been updated more than 12h ago, stop syncing other (older) users
+        if sync_update and (new_updated_ts < datetime.now().timestamp() - 6 * 3600):
+            # user has been updated more than 6h ago, stop syncing other (older) users
             break
         old_updated_ts = 1
         if not created and db_user.last_updated_ts:
