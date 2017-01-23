@@ -135,7 +135,7 @@ def process_user(requester, user, db_user):
 
     # check if the last event timestamp/seen timestamp is different than old one
     user_updated_ts = user.get('old_updated_ts')
-    if user_updated_ts and db_user.intercom_content and user_updated_ts >= db_user.last_updated_ts:
+    if user_updated_ts and user_updated_ts >= db_user.last_updated_ts:
         logger.info("User '%s' seems unchanged, skipping further processing", user['name'])
         db_user.download_status = Document.READY
         db_user.save()
