@@ -102,7 +102,8 @@ def collect_customers(requester):
             db_customer.helpscout_company = customer.organization
             db_customer.helpscout_emails = ', '.join(customer.emails) if customer.emails else None
             db_customer.save()
-            algolia_engine.sync(db_customer, add=created)
+            if created:
+                algolia_engine.sync(db_customer, add=created)
             subtask(process_customer).delay(requester, db_customer, mailboxes, folders, users)
             # add sleep of one second to avoid breaking API rate limits
             time.sleep(2)
