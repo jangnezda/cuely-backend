@@ -90,7 +90,8 @@ def collect_users(requester, sync_update=False):
         db_user.intercom_avatar_link = u.avatar.image_url
         db_user.intercom_content = None
         db_user.save()
-        algolia_engine.sync(db_user, add=created)
+        if created:
+            algolia_engine.sync(db_user, add=created)
         # can't pickle whole Intercom user object, because it contains helper methods like 'load', 'find', etc.
         # therefore, let's just copy the data we're interested in
         user_cache[u.id] = ({
