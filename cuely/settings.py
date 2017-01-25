@@ -182,7 +182,7 @@ USE_L10N = True
 
 USE_TZ = True
 
-SESSION_COOKIE_AGE = 15552000 # 6 months
+SESSION_COOKIE_AGE = 31104000 # 12 months
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.10/howto/static-files/
