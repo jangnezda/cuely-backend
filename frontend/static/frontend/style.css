@@ -1,5 +1,5 @@
-body {
-  margin: 30px
+html, body {
+  height: 100%;
 }
 
 div#integrations {
@@ -10,4 +10,16 @@ div#integrations {
 div#integrations h1 {
   padding-bottom: 20px;
   font-size: 25px
+}
+
+div#content {
+  height: 80%;
+  display: table;
+  margin: auto;
+}
+
+div#content_cell {
+  height: 100%;
+  display: table-cell;
+  vertical-align: middle;
 }

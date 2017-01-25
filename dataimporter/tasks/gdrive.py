@@ -237,10 +237,10 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
                     doc.download_status = Document.PENDING
                     subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
             else:
+                algolia_engine.sync(doc, add=created)
                 subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
 
             doc.save()
-            algolia_engine.sync(doc, add=created)
 
         page_token = files.get('nextPageToken')
         if not page_token:
@@ -298,6 +298,7 @@ def download_gdrive_document(doc, access_token, refresh_token):
         doc.download_status = Document.READY
         doc.last_synced = _get_utc_timestamp()
         doc.save()
+        algolia_engine.sync(doc, add=False)
         return
 
     doc.download_status = Document.PROCESSING
