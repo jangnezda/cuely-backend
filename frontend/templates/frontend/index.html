@@ -5,13 +5,11 @@
 
 {% block content %}
 {% if request.user.is_authenticated %}
-<h2>Hello, {{request.user}}!</h2>
-<hr />
-<div class="panel panel-default" style="width: 500px">
+<div class="panel panel-default" style="width: 450px">
   <div class="panel-heading">Manage integrations</div>
   <div class="panel-body">
     {% if "google-oauth2" not in backends %}
-      <a class="btn btn-block btn-social btn-google" href="/login/google-oauth2/">
+      <a class="btn btn-block btn-social btn-google" href="/login/google-oauth2?next=/home/auth_complete/google-oauth">
         <span class="fa fa-google"></span> Add Google Drive integration
       </a>
     {% else %}
@@ -21,7 +19,7 @@
     {% endif %}
 
     {% if "pipedrive-apikeys" not in backends %}
-      <a class="btn btn-block btn-social btn-vk" href="/login/pipedrive-apikeys">
+      <a class="btn btn-block btn-social btn-vk" href="/login/pipedrive-apikeys?next=/home/auth_complete/pipedrive-apikeys">
         <img src="{% static "frontend/pipedrive-logo.png" %}" style="padding: 3px">Add Pipedrive integration
       </a>
     {% else %}
@@ -31,7 +29,7 @@
     {% endif %}
 
     {% if "helpscout-apikeys" not in backends %}
-      <a class="btn btn-block btn-social btn-reddit" href="/login/helpscout-apikeys">
+      <a class="btn btn-block btn-social btn-reddit" href="/login/helpscout-apikeys?next=/home/auth_complete/helpscout-apikeys">
         <img src="{% static "frontend/helpscout-logo.png" %}" style="padding: 3px">Add Helpscout integration
       </a>
     {% else %}
@@ -41,7 +39,7 @@
     {% endif %}
 
 		{% if "helpscout-docs-apikeys" not in backends %}
-			<a class="btn btn-block btn-social btn-reddit" href="/login/helpscout-docs-apikeys">
+			<a class="btn btn-block btn-social btn-reddit" href="/login/helpscout-docs-apikeys?next=/home/auth_complete/helpscout-docs-apikeys">
 				<img src="{% static "frontend/helpscout-logo.png" %}" style="padding: 3px">Add Helpscout DOCS integration
 			</a>
 		{% else %}
@@ -51,7 +49,7 @@
 		{% endif %}
 
 		{% if "jira-oauth" not in backends %}
-			<a class="btn btn-block btn-social btn-reddit" href="/login/jira-oauth">
+			<a class="btn btn-block btn-social btn-reddit" href="/login/jira-oauth?next=/home/auth_complete/jira-oauth">
 				<img src="{% static "frontend/jira-logo.png" %}" style="padding: 3px">Add JIRA integration
 			</a>
 		{% else %}
@@ -63,7 +61,20 @@
   </div>
 </div>
 {% else %}
-Please log in!
+<div class="panel panel-default" style="width: 450px;">
+  <div class="panel-heading">
+    <p style="width: 100%; text-align: center; font-weight: 600">Welcome to Cuely search app</p>
+		<p>
+			Please authenticate with your Google account to start using the app.
+      Cuely will begin syncing with your Google Drive after signing in.
+		</p>
+  </div>
+  <div class="panel-body" style="text-align: center;padding: 50px;">
+		<a href="/login/google-oauth2/?next=/home/auth_complete/google-oauth2">
+			<img src="{% static "frontend/btn_google_signin_dark_normal_web.png" %}" />
+		</a>
+	</div>
+</div>
 {% endif %}
 
 {% endblock %}

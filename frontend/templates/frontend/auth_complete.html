@@ -1,0 +1,15 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+{% if request.user.is_authenticated %}
+<div class="panel panel-default" style="width: 450px">
+  <div class="panel-heading">
+    <p style="width: 100%; text-align: center; font-weight: 600;margin:auto">
+			You have successfully completed authentication.
+		</p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

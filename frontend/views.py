@@ -1,9 +1,7 @@
 import os
-import json
-from django.http import HttpResponse, HttpResponseForbidden, JsonResponse, HttpResponseBadRequest
+from django.http import HttpResponseForbidden, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_exempt
 
 from dataimporter.models import Document, UserAttributes
 from dataimporter.tasks.gdrive import start_synchronization as gdrive_sync
@@ -53,6 +51,10 @@ def helpscout_docs_apikeys(request):
 
 def jira_oauth(request):
     return render(request, 'frontend/jira_oauth.html', {})
+
+
+def auth_complete(request):
+    return render(request, 'frontend/auth_complete.html', {})
 
 
 @require_POST
@@ -161,33 +163,3 @@ def update_segment_status(request):
         })
     else:
         return HttpResponseForbidden()
-
-
-@csrf_exempt
-def intercom_callback(request):
-    """
-    Accept notifications from Intercom.
-    Documentation: https://developers.intercom.com/v2.0/reference#webhooks-and-notifications
-    """
-    if 'json' not in request.META.get('CONTENT_TYPE', ''):
-        return _bad_json_response()
-
-    try:
-        body = json.loads(request.body.decode("utf8"))
-        logger.debug(json.dumps(body))
-        return JsonResponse({
-            'status': 'Ok',
-            'message': 'Notification accepted'
-        })
-    except Exception as e:
-        logger.error(e)
-        # could not parse json
-        return _bad_json_response()
-
-
-def _bad_json_response():
-    return HttpResponse(
-        content="""{ "status": "Failed", "message": "Request body must be in json format" }""",
-        status=400,
-        content_type='application/json'
-    )

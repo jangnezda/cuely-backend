@@ -7,7 +7,7 @@ urlpatterns = [
     url(r'algolia_key/?$', views.get_algolia_key),
     url(r'sync/?$', views.start_synchronization),
     url(r'sync_status/?', views.sync_status),
-    url(r'intercom_hook/?', views.intercom_callback),
+    url(r'auth_complete/.*/?', views.auth_complete),
     url(r'intercom_apikeys/?', views.intercom_apikeys),
     url(r'pipedrive_apikeys/?', views.pipedrive_apikeys),
     url(r'helpscout_apikeys/?', views.helpscout_apikeys),
