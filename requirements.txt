@@ -17,7 +17,7 @@ python-social-auth==0.2.21
 
 algoliasearch==1.11.0
 # integrations
-google-api-python-client==1.5.3
+google-api-python-client==1.6.1
 oauth2client==3.0.0
 jira==1.0.7
 cryptography==1.6

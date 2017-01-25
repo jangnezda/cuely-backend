@@ -45,7 +45,8 @@ FILE_FIELDSET = ','.join([
     'trashed',
     'lastModifyingUser(displayName,photoLink)',
     'owners(displayName,photoLink)',
-    'parents'
+    'parents',
+    'description'
 ])
 GDRIVE_KEYWORDS = {
     'primary': 'gdrive,google drive',
@@ -194,19 +195,30 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
         if not folders and len(items) > 0:
             # retreive all folders to be able to get file path more easily in the file listing(s)
             folders = get_gdrive_folders(service)
+            # check if any folder was marked as hidden and we already have it synced ...
+            # if we do, then remove it (plus all children) from our indexing
+            for folder_id, folder in folders.items():
+                if folder.get('hidden') is True:
+                    desync_folder(folder.get('id'), folders, requester, service)
+
         for item in items:
             if 'file' in item:
                 item = item['file']
             # check for ignored mime types
             if any(x.match(item.get('mimeType', '')) for x in IGNORED_MIMES):
                 continue
-            if item.get('trashed'):
-                # file was removed
-                Document.objects.filter(document_id=item['id']).delete()
+            parents = item.get('parents', [])
+            hidden = is_hidden(item.get('description')) or any(is_hidden_in_folder(f, folders) for f in parents)
+            if item.get('trashed') or hidden:
+                # file was removed or hidden
+                Document.objects.filter(
+                    document_id=item['id'],
+                    requester=requester,
+                    user_id=requester.id
+                ).delete()
                 continue
 
             # handle file path within gdrive
-            parents = item.get('parents', [])
             parent = parents[0] if parents else None
             path = get_gdrive_path(parent, folders)
 
@@ -248,6 +260,30 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
     return new_start_page_token
 
 
+def desync_folder(folder_id, folders, requester, service):
+    db_folder = Document.objects.filter(document_id=folder_id, user_id=requester.id)
+    if db_folder.exists():
+        page_token = None
+        while True:
+            params = {
+                'q': "'{}' in parents".format(folder_id),
+                'pageSize': 100,
+                'fields': 'files(id),nextPageToken'
+            }
+            if page_token:
+                params['pageToken'] = page_token
+            children = service.files().list(**params).execute()
+            child_ids = [c.get('id') for c in children.get('files', [])]
+            for cid in child_ids:
+                if cid in folders:
+                    desync_folder(cid, folders, requester, service)
+            Document.objects.filter(document_id__in=child_ids, user_id=requester.id).delete()
+            page_token = children.get('nextPageToken')
+            if not page_token:
+                break
+        db_folder.delete()
+
+
 def get_gdrive_folders(service):
     page_token = None
     lookup = {}
@@ -255,7 +291,7 @@ def get_gdrive_folders(service):
         params = {
             'q': "mimeType = 'application/vnd.google-apps.folder'",
             'pageSize': 100,
-            'fields': 'files(id,name,parents),nextPageToken'
+            'fields': 'files(id,name,parents,description),nextPageToken'
         }
         if page_token:
             params['pageToken'] = page_token
@@ -265,12 +301,32 @@ def get_gdrive_folders(service):
             lookup[item.get('id')] = {
                 'id': item.get('id'),
                 'parent': parents[0] if parents else None,
-                'name': item.get('name')
+                'name': item.get('name'),
+                'hidden': is_hidden(item.get('description'))
             }
         page_token = files.get('nextPageToken')
         if not page_token:
             break
     return lookup
+
+
+def is_hidden(item_description):
+    if not item_description:
+        return False
+    return '!cuely' in item_description.lower()
+
+
+def is_hidden_in_folder(file_id, folders):
+    if not (file_id and folders and file_id in folders):
+        return []
+    while file_id is not None:
+        f = folders.get(file_id)
+        if f.get('hidden') is True:
+            return True
+        file_id = f.get('parent')
+        if file_id not in folders:
+            file_id = None
+    return False
 
 
 def get_gdrive_path(file_id, folders):
@@ -319,12 +375,10 @@ def download_gdrive_document(doc, access_token, refresh_token):
         content = cut_utf_string(response.decode('UTF-8'), 9000, step=10)
         doc.content = content
         doc.last_synced = _get_utc_timestamp()
-    except Exception as e:
-        logger.error(e)
+        algolia_engine.sync(doc, add=False)
     finally:
         doc.download_status = Document.READY
         doc.save()
-        algolia_engine.sync(doc, add=False)
 
 
 def get_google_tokens(user):
