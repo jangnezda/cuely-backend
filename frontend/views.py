@@ -5,7 +5,6 @@ from django.views.decorators.http import require_POST
 
 from dataimporter.models import Document, UserAttributes
 from dataimporter.tasks.gdrive import start_synchronization as gdrive_sync
-from dataimporter.tasks.intercom import start_synchronization as intercom_sync
 from dataimporter.tasks.pipedrive import start_synchronization as pipedrive_sync
 from dataimporter.tasks.help_scout import start_synchronization as helpscout_sync
 from dataimporter.tasks.help_scout_docs import start_synchronization as helpscout_docs_sync
@@ -15,8 +14,6 @@ import logging
 logger = logging.getLogger(__name__)
 sync_mapping = {
     'google-oauth2': gdrive_sync,
-    'intercom-oauth': intercom_sync,
-    'intercom-apikeys': intercom_sync,
     'pipedrive-apikeys': pipedrive_sync,
     'helpscout-apikeys': helpscout_sync,
     'helpscout-docs-apikeys': helpscout_docs_sync,
@@ -31,10 +28,6 @@ def index(request):
             backends.append(sa.provider)
 
     return render(request, 'frontend/index.html', {'backends': backends})
-
-
-def intercom_apikeys(request):
-    return render(request, 'frontend/intercom_apikeys.html', {})
 
 
 def pipedrive_apikeys(request):
@@ -81,7 +74,6 @@ def sync_status(request):
     user = request.user
     if user.is_authenticated:
         provider = request.GET.get('provider', 'google-oauth2').lower()
-        intercom = 'intercom' in provider
         pipedrive = 'pipedrive' in provider
         gdrive = 'google' in provider
         helpscout_docs = 'helpscout-docs' in provider
@@ -90,7 +82,6 @@ def sync_status(request):
         documents_count = Document.objects.filter(
             requester=user,
             document_id__isnull=not gdrive,
-            intercom_user_id__isnull=not intercom,
             pipedrive_deal_id__isnull=not pipedrive,
             helpscout_customer_id__isnull=not helpscout,
             helpscout_document_id__isnull=not helpscout_docs,
@@ -99,7 +90,6 @@ def sync_status(request):
         documents_ready_count = Document.objects.filter(
             requester=user,
             document_id__isnull=not gdrive,
-            intercom_user_id__isnull=not intercom,
             pipedrive_deal_id__isnull=not pipedrive,
             helpscout_customer_id__isnull=not helpscout,
             helpscout_document_id__isnull=not helpscout_docs,

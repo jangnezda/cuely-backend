@@ -26,8 +26,6 @@ class Document(models.Model):
     primary_keywords = models.CharField(max_length=500, blank=True, null=True)
     secondary_keywords = models.CharField(max_length=500, blank=True, null=True)
 
-    intercom_user_id = models.CharField(max_length=200, null=True)
-    intercom_title = models.CharField(max_length=500, blank=True, null=True)
     pipedrive_deal_id = models.CharField(max_length=50, blank=True, null=True)
     pipedrive_title = models.CharField(max_length=500, blank=True, null=True)
     pipedrive_deal_company = models.CharField(max_length=100, blank=True, null=True)

@@ -8,7 +8,6 @@ urlpatterns = [
     url(r'sync/?$', views.start_synchronization),
     url(r'sync_status/?', views.sync_status),
     url(r'auth_complete/.*/?', views.auth_complete),
-    url(r'intercom_apikeys/?', views.intercom_apikeys),
     url(r'pipedrive_apikeys/?', views.pipedrive_apikeys),
     url(r'helpscout_apikeys/?', views.helpscout_apikeys),
     url(r'helpscout_docs_apikeys/?', views.helpscout_docs_apikeys),

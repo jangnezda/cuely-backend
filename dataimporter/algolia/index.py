@@ -30,18 +30,6 @@ class DocumentIndex(object):
         'thumbnail_link',
         'path',
 
-        # IntercomUser
-        'intercom_user_id',
-        'intercom_email',
-        'intercom_title',
-        'intercom_content',
-        'intercom_session_count',
-        'intercom_segments',
-        'intercom_plan',
-        'intercom_monthly_spend',
-        'intercom_company',
-        'intercom_status',
-
         # Pipedrive
         'pipedrive_deal_id',
         'pipedrive_title',
@@ -96,7 +84,6 @@ class DocumentIndex(object):
             'unordered(primary_keywords)',
             'unordered(secondary_keywords)',
             'unordered(title)',
-            'unordered(intercom_title)',
             'unordered(pipedrive_title)',
             'unordered(helpscout_title)',
             'unordered(helpscout_document_title)',
@@ -105,9 +92,6 @@ class DocumentIndex(object):
             'modifier_display_name',
             'unordered(path)',
             'jira_issue_key',
-            'intercom_company',
-            'intercom_email',
-            'intercom_status',
             'helpscout_company',
             'helpscout_emails',
             'helpscout_mailbox',
@@ -124,9 +108,7 @@ class DocumentIndex(object):
             'pipedrive_deal_stage',
             'helpscout_content',
             'content',
-            'intercom_content',
             'pipedrive_content',
-            'intercom_segments',
             'helpscout_document_content',
             'jira_issue_description'
         ],

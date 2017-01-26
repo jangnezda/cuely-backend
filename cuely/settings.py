@@ -126,8 +126,6 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTHENTICATION_BACKENDS = (
     'social.backends.google.GoogleOAuth2',
-    'dataimporter.auth.IntercomOauth',
-    'dataimporter.auth.IntercomApiKeysAuth',
     'dataimporter.auth.PipedriveApiKeysAuth',
     'dataimporter.auth.HelpscoutApiKeysAuth',
     'dataimporter.auth.HelpscoutDocsApiKeysAuth',
@@ -144,11 +142,6 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
     'access_type': 'offline',
     'prompt': 'consent'
 }
-
-SOCIAL_AUTH_INTERCOM_OAUTH_KEY = os.environ['INTERCOM_API_CLIENT_ID']
-SOCIAL_AUTH_INTERCOM_OAUTH_SECRET = os.environ['INTERCOM_API_CLIENT_SECRET']
-
-SOCIAL_AUTH_INTERCOM_APIKEYS_FORM_URL = '/home/intercom_apikeys/'
 
 SOCIAL_AUTH_PIPEDRIVE_APIKEYS_FORM_URL = '/home/pipedrive_apikeys/'
 
@@ -199,7 +192,6 @@ STATIC_URL = '/static/'
 # when load on specific integration becomes too high.
 CELERY_IMPORTS = (
     'dataimporter.tasks.gdrive',
-    'dataimporter.tasks.intercom',
     'dataimporter.tasks.help_scout',
     'dataimporter.tasks.help_scout_docs',
     'dataimporter.tasks.pipedrive',
@@ -219,7 +211,6 @@ CELERY_DEFAULT_EXCHANGE_TYPE = 'direct'
 CELERY_QUEUES = (
     Queue('default'),
     Queue('gdrive', routing_key='gdrive'),
-    Queue('intercom', routing_key='intercom'),
     Queue('help_scout', routing_key='help_scout'),
     Queue('help_scout_docs', routing_key='help_scout_docs'),
     Queue('pipedrive', routing_key='pipedrive'),
@@ -229,10 +220,6 @@ CELERYBEAT_SCHEDULE = {
     'sync-gdrive': {
         'task': 'dataimporter.tasks.gdrive.update_synchronization',
         'schedule': timedelta(seconds=120),
-    },
-    'sync-intercom': {
-        'task': 'dataimporter.tasks.intercom.update_synchronization',
-        'schedule': timedelta(seconds=600),
     },
     'sync-pipedrive': {
         'task': 'dataimporter.tasks.pipedrive.update_synchronization',

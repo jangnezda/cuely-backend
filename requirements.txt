@@ -24,4 +24,3 @@ cryptography==1.6
 
 git+git://github.com/pipetop/pypedriver@master#egg=pypedriver
 git+git://github.com/pipetop/helpscout-api-python@master#egg=helpscout
-git+git://github.com/pipetop/python-intercom@master#egg=python-intercom
