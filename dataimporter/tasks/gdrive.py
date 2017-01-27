@@ -372,7 +372,7 @@ def download_gdrive_document(doc, access_token, refresh_token):
         response = request.execute()
         logger.info("Done downloading {} [{}]".format(doc.title, doc.document_id))
 
-        content = cut_utf_string(response.decode('UTF-8'), 9000, step=10)
+        content = cut_utf_string(response.decode('UTF-8', errors='replace'), 9000, step=10)
         doc.content = content
         doc.last_synced = _get_utc_timestamp()
         algolia_engine.sync(doc, add=False)
