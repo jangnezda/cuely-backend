@@ -126,22 +126,26 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTHENTICATION_BACKENDS = (
     'social.backends.google.GoogleOAuth2',
+    'social.backends.github.GithubOAuth2',
     'dataimporter.auth.PipedriveApiKeysAuth',
     'dataimporter.auth.HelpscoutApiKeysAuth',
     'dataimporter.auth.HelpscoutDocsApiKeysAuth',
     'dataimporter.auth.JiraOAuth',
     'django.contrib.auth.backends.ModelBackend',
 )
+SOCIAL_AUTH_REDIRECT_IS_HTTPS=True
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ['GDRIVE_API_CLIENT_ID']
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ['GDRIVE_API_CLIENT_SECRET']
-SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
-    'https://www.googleapis.com/auth/drive.readonly'
-]
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['https://www.googleapis.com/auth/drive.readonly']
 SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
     'access_type': 'offline',
     'prompt': 'consent'
 }
+
+SOCIAL_AUTH_GITHUB_KEY = os.environ['GITHUB_API_CLIENT_ID']
+SOCIAL_AUTH_GITHUB_SECRET = os.environ['GITHUB_API_CLIENT_SECRET']
+SOCIAL_AUTH_GITHUB_SCOPE = ['repo', 'user:email']
 
 SOCIAL_AUTH_PIPEDRIVE_APIKEYS_FORM_URL = '/home/pipedrive_apikeys/'
 

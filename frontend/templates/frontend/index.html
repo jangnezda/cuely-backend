@@ -10,11 +10,21 @@
   <div class="panel-body">
     {% if "google-oauth2" not in backends %}
       <a class="btn btn-block btn-social btn-google" href="/login/google-oauth2?next=/home/auth_complete/google-oauth">
-        <span class="fa fa-google"></span> Add Google Drive integration
+        <span class="fa fa-google"></span>Add Google Drive integration
       </a>
     {% else %}
       <a class="btn disabled btn-block btn-social btn-google" href="#">
-        <span class="fa fa-google"></span> Google Drive integration is ready
+        <span class="fa fa-google"></span>Google Drive integration is ready
+      </a>
+    {% endif %}
+
+    {% if "github" not in backends %}
+      <a class="btn btn-block btn-social btn-github" href="/login/github?next=/home/auth_complete/github">
+        <span class="fa fa-github"></span>Add Github integration
+      </a>
+    {% else %}
+      <a class="btn disabled btn-block btn-social btn-github" href="#">
+        <span class="fa fa-github"></span>Github integration is ready
       </a>
     {% endif %}
 
