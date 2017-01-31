@@ -242,7 +242,9 @@ CELERYBEAT_SCHEDULE = {
 # Algolia setup
 ALGOLIA = {
     'APPLICATION_ID': os.environ['ALGOLIA_APPLICATION_ID'],
-    'API_KEY': os.environ['ALGOLIA_API_KEY']
+    'API_KEY': os.environ['ALGOLIA_API_KEY'],
+    'API_SEARCH_KEY': os.environ['ALGOLIA_API_SEARCH_KEY'],
+    'INDEX_NAME': os.environ['ALGOLIA_INDEX_NAME']
 }
 
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

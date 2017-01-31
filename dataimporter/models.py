@@ -57,6 +57,7 @@ class UserAttributes(models.Model):
     jira_consumer_key = models.CharField(max_length=500, blank=True, null=True)
     jira_oauth_token = models.CharField(max_length=500, blank=True, null=True)
     jira_oauth_verifier = models.CharField(max_length=500, blank=True, null=True)
+    algolia_key = models.CharField(max_length=1000, blank=True, null=True)
 
 
 class AlgoliaIndex(models.Model):
