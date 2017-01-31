@@ -133,7 +133,7 @@ AUTHENTICATION_BACKENDS = (
     'dataimporter.auth.JiraOAuth',
     'django.contrib.auth.backends.ModelBackend',
 )
-SOCIAL_AUTH_REDIRECT_IS_HTTPS=True
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ['GDRIVE_API_CLIENT_ID']
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ['GDRIVE_API_CLIENT_SECRET']
