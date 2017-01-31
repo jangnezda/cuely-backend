@@ -2,6 +2,7 @@ import os
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
+from django.conf import settings
 
 from dataimporter.models import Document, UserAttributes
 from dataimporter.tasks.gdrive import start_synchronization as gdrive_sync
@@ -113,8 +114,8 @@ def get_algolia_key(request):
             'username': request.user.username,
             'name': request.user.first_name + ' ' + request.user.last_name,
             'email': request.user.email,
-            'appId': 'OPDWYH4IR4',
-            'searchKey': '0b28a5913167a1618773992171c04344',
+            'appId': settings.ALGOLIA['APPLICATION_ID'],
+            'searchKey': request.user.userattributes.algolia_key,
             'segmentKey': os.environ['SEGMENT_KEY'],
             'segmentIdentified': ua.segment_identify,
             'integrations': [
