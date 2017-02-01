@@ -1,7 +1,8 @@
-import os
 from django.conf import settings
 from algoliasearch import algoliasearch
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_delete, post_save
+from django.contrib.auth.models import User
+from dataimporter.models import UserAttributes
 from dataimporter.algolia.index import INDEX_MODEL_MAP
 
 import logging
@@ -23,6 +24,7 @@ class AlgoliaEngine(object):
         self.client = algoliasearch.Client(app_id, api_key)
         self.client.set_extra_header('User-Agent', 'Cuely Backend')
         self.existing_algolia_indexes = [x.get('name') for x in self.client.list_indexes().get('items', [])]
+        post_save.connect(self._post_save_receiver, User)
 
     def register_db_model(self, index_model):
         self._index_model = index_model
@@ -50,6 +52,25 @@ class AlgoliaEngine(object):
         """ Signal handler for when a registered model has been deleted. """
         self.get_index(instance)[0].delete_object(instance.pk)
 
+    def _post_save_receiver(self, instance, created, **kwargs):
+        """ Post save signal to generate algolia key after a new user has been created. """
+        if created:
+            search_key = settings.ALGOLIA['API_SEARCH_KEY']
+            user_key = self.client.generate_secured_api_key(
+                search_key,
+                {
+                    'filters': 'user_id={}'.format(instance.id),
+                    'restrictIndices': settings.ALGOLIA['INDEX_NAME']
+                }
+            )
+            ua = None
+            try:
+                ua = instance.userattributes
+            except UserAttributes.DoesNotExist:
+                ua, created = UserAttributes.objects.get_or_create(user=instance)
+            ua.algolia_key = user_key
+            ua.save()
+
     def reconfigure(self, index_name, new_settings):
         """ Reconfigure an existing index """
         if index_name not in self._indices:
@@ -62,7 +83,7 @@ class AlgoliaEngine(object):
 
     def get_index(self, instance):
         # TODO: lookup index based on team_id (when teams are implemented)
-        db_idx, algolia_idx, fields = self._indices.get(os.environ["ALGOLIA_INDEX_NAME"])
+        db_idx, algolia_idx, fields = self._indices.get(settings.ALGOLIA['INDEX_NAME'])
         return (algolia_idx, fields)
 
     def _build_object(self, instance, fields, with_id=False):
