@@ -76,6 +76,15 @@ class DocumentIndex(object):
         'jira_project_name',
         'jira_project_key',
         'jira_project_link',
+
+        # Github
+        'github_repo_id',
+        'github_repo_title',
+        'github_repo_owner',
+        'github_repo_description',
+        'github_repo_contributors',
+        'github_repo_content',
+        'github_repo_readme',
     ]
 
     settings = {

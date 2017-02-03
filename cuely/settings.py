@@ -200,6 +200,7 @@ CELERY_IMPORTS = (
     'dataimporter.tasks.help_scout_docs',
     'dataimporter.tasks.pipedrive',
     'dataimporter.tasks.jira',
+    'dataimporter.tasks.github',
 )
 
 CELERY_BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'
@@ -218,7 +219,8 @@ CELERY_QUEUES = (
     Queue('help_scout', routing_key='help_scout'),
     Queue('help_scout_docs', routing_key='help_scout_docs'),
     Queue('pipedrive', routing_key='pipedrive'),
-    Queue('jira', routing_key='jira')
+    Queue('jira', routing_key='jira'),
+    Queue('github', routing_key='github')
 )
 CELERYBEAT_SCHEDULE = {
     'sync-gdrive': {
@@ -240,6 +242,10 @@ CELERYBEAT_SCHEDULE = {
     'sync-jira': {
         'task': 'dataimporter.tasks.jira.update_synchronization',
         'schedule': timedelta(seconds=580),
+    },
+    'sync-github': {
+        'task': 'dataimporter.tasks.github.update_synchronization',
+        'schedule': timedelta(seconds=80),
     }
 }
 

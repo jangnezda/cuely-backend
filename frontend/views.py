@@ -10,6 +10,7 @@ from dataimporter.tasks.pipedrive import start_synchronization as pipedrive_sync
 from dataimporter.tasks.help_scout import start_synchronization as helpscout_sync
 from dataimporter.tasks.help_scout_docs import start_synchronization as helpscout_docs_sync
 from dataimporter.tasks.jira import start_synchronization as jira_sync
+from dataimporter.tasks.github import start_synchronization as github_sync
 
 import logging
 logger = logging.getLogger(__name__)
@@ -18,7 +19,8 @@ sync_mapping = {
     'pipedrive-apikeys': pipedrive_sync,
     'helpscout-apikeys': helpscout_sync,
     'helpscout-docs-apikeys': helpscout_docs_sync,
-    'jira-oauth': jira_sync
+    'jira-oauth': jira_sync,
+    'github': github_sync,
 }
 
 
@@ -80,13 +82,15 @@ def sync_status(request):
         helpscout_docs = 'helpscout-docs' in provider
         helpscout = 'helpscout' in provider and not helpscout_docs
         jira = 'jira' in provider
+        github = 'github' in provider
         documents_count = Document.objects.filter(
             requester=user,
             document_id__isnull=not gdrive,
             pipedrive_deal_id__isnull=not pipedrive,
             helpscout_customer_id__isnull=not helpscout,
             helpscout_document_id__isnull=not helpscout_docs,
-            jira_issue_key__isnull=not jira
+            jira_issue_key__isnull=not jira,
+            github_repo_id__isnull=not github
         ).count()
         documents_ready_count = Document.objects.filter(
             requester=user,
@@ -95,6 +99,7 @@ def sync_status(request):
             helpscout_customer_id__isnull=not helpscout,
             helpscout_document_id__isnull=not helpscout_docs,
             jira_issue_key__isnull=not jira,
+            github_repo_id__isnull=not github,
             download_status=Document.READY).count()
         return JsonResponse({
             "documents": documents_count,
@@ -109,6 +114,13 @@ def sync_status(request):
 def get_algolia_key(request):
     if request.user.is_authenticated:
         ua = get_or_create_user_attributes(request.user)
+        integrations = []
+        for sa in request.user.social_auth.all().order_by('provider'):
+            sap = sa.provider
+            if '-' in sap:
+                sap = '-'.join(sap.split('-')[:-1])
+            integrations.append(sap)
+
         return JsonResponse({
             'userid': request.user.id,
             'username': request.user.username,
@@ -118,10 +130,7 @@ def get_algolia_key(request):
             'searchKey': request.user.userattributes.algolia_key,
             'segmentKey': os.environ['SEGMENT_KEY'],
             'segmentIdentified': ua.segment_identify,
-            'integrations': [
-                '-'.join(sa.provider.split('-')[:-1])
-                for sa in request.user.social_auth.all().order_by('provider')
-            ]
+            'integrations': integrations
         })
     else:
         return HttpResponseForbidden()
