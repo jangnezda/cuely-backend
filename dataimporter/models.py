@@ -42,6 +42,8 @@ class Document(models.Model):
     jira_issue_title = models.CharField(max_length=500, blank=True, null=True)
     github_repo_id = models.CharField(max_length=50, blank=True, null=True)
     github_repo_title = models.CharField(max_length=500, blank=True, null=True)
+    github_commit_id = models.CharField(max_length=50, blank=True, null=True)
+    github_commit_title = models.CharField(max_length=500, blank=True, null=True)
 
     def __str__(self):
         return str(self.id) if self.id else "Not saved to DB"

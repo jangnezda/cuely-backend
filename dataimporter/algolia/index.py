@@ -85,6 +85,13 @@ class DocumentIndex(object):
         'github_repo_contributors',
         'github_repo_content',
         'github_repo_readme',
+        'github_repo_commit_count',
+        'github_commit_id',
+        'github_commit_title',
+        'github_commit_content',
+        'github_commit_repo_name',
+        'github_commit_committer',
+        'github_commit_files'
     ]
 
     settings = {
