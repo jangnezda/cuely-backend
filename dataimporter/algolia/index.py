@@ -79,19 +79,21 @@ class DocumentIndex(object):
 
         # Github
         'github_repo_id',
-        'github_repo_title',
+        'github_title',
         'github_repo_owner',
+        'github_repo_full_name',
         'github_repo_description',
         'github_repo_contributors',
         'github_repo_content',
         'github_repo_readme',
         'github_repo_commit_count',
         'github_commit_id',
-        'github_commit_title',
         'github_commit_content',
-        'github_commit_repo_name',
         'github_commit_committer',
-        'github_commit_files'
+        'github_commit_files',
+        'github_file_id',
+        'github_file_committers',
+        'github_file_path',
     ]
 
     settings = {

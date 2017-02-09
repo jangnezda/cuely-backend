@@ -19,7 +19,7 @@ GITHUB_SECONDARY_KEYWORDS = {
     'repo': 'repo',
     'commit': 'commit,log',
     'issue': 'issue,ticket,task',
-    'file': 'file,dir,'
+    'file': 'file,dir'
 }
 
 
@@ -58,12 +58,13 @@ def collect_repos(requester):
         db_repo, created = Document.objects.get_or_create(
             github_repo_id=repo.id,
             github_commit_id__isnull=True,
+            github_file_id__isnull=True,
             requester=requester,
             user_id=requester.id
         )
         db_repo.primary_keywords = GITHUB_PRIMARY_KEYWORDS
         db_repo.secondary_keywords = GITHUB_SECONDARY_KEYWORDS['repo']
-        db_repo.github_repo_title = 'Repo: {}'.format(repo.name)
+        db_repo.github_title = 'Repo: {}'.format(repo.name)
         db_repo.github_repo_owner = repo.owner.login
         db_repo.github_repo_description = repo.description
         logger.debug("Processing github repo '%s' for user '%s'", repo.full_name, requester.username)
@@ -87,6 +88,7 @@ def collect_repos(requester):
             continue
         db_repo.github_repo_commit_count = commit_count
         db_repo.github_repo_contributors = contributors
+        db_repo.github_repo_full_name = repo.full_name
         new_timestamp = max(repo.updated_at, repo.pushed_at)
         if created or new_timestamp.timestamp() > (db_repo.last_updated_ts or 0):
             db_repo.last_updated_ts = new_timestamp.timestamp()
@@ -107,35 +109,141 @@ def collect_repos(requester):
                 # readme does not exist
                 db_repo.github_repo_content = None
             algolia_engine.sync(db_repo, add=created)
+            # sync files
+            subtask(collect_files).delay(requester, repo.id, repo.full_name, repo.html_url, repo.default_branch)
         # sync commits
-        subtask(collect_commits).delay(requester, repo.id, repo.full_name, commit_count)
+        subtask(collect_commits).delay(
+            requester, repo.id, repo.full_name, repo.html_url, repo.default_branch, commit_count
+        )
 
         db_repo.last_synced = _get_utc_timestamp()
         db_repo.download_status = Document.READY
         db_repo.save()
+        break
         # add sleep of one second to avoid breaking API rate limits
         time.sleep(1)
 
 
 @shared_task
-def collect_commits(requester, repo_id, repo_name, commit_count):
+def collect_files(requester, repo_id, repo_name, repo_url, default_branch):
+    """
+    List all files in a repo - should be called once, after first sync of a repo. Subsequent syncing is handled
+    via collect_commits() function.
+
+    Note that this uses Github's API call for retrieval of recursive trees:
+      https://developer.github.com/v3/git/trees/#get-a-tree-recursively
+    This API call returns a flat list of all files and saves us many API calls that would be needed
+    to recursively fetch files for each repo directory. But it may not work well for very big repos
+    (> 5k files), becuase Github API has a limit of number of elements it will return in one call.
+    """
+    github_client = init_github_client(requester)
+    repo = github_client.get_repo(full_name_or_id=repo_name)
+    new_files = []
+    for f in repo.get_git_tree(sha=repo.default_branch, recursive=True).tree:
+        db_file, created = Document.objects.get_or_create(
+            github_file_id=f.sha,
+            github_repo_id=repo_id,
+            requester=requester,
+            user_id=requester.id
+        )
+        if created:
+            new_files.append({
+                'sha': f.sha,
+                'filename': f.path,
+                'action': 'modified'
+            })
+            db_file.primary_keywords = GITHUB_PRIMARY_KEYWORDS
+            db_file.secondary_keywords = GITHUB_SECONDARY_KEYWORDS['file']
+            # set the timestamp to 0 (epoch) to signal that we don't know the update timestamp
+            db_file.last_updated_ts = 0
+            db_file.last_updated = datetime.utcfromtimestamp(0).isoformat() + 'Z'
+            db_file.github_title = '{}: {}'.format('Dir' if f.type == 'tree' else 'File', f.path.split('/')[-1])
+            db_file.github_file_path = f.path
+            db_file.github_repo_full_name = repo_name
+            db_file.webview_link = '{}/blob/{}/{}'.format(repo_url, default_branch, f.path)
+            algolia_engine.sync(db_file, add=created)
+        db_file.last_synced = _get_utc_timestamp()
+        db_file.download_status = Document.READY
+        db_file.save()
+    # run enrich_files() for all new_files in chunks of 50 items
+    for ff in [new_files[x:x + 50] for x in range(0, len(new_files), 50)]:
+        subtask(enrich_files).delay(requester, ff, repo.id, repo.full_name, repo_url, default_branch)
+
+
+@shared_task
+def enrich_files(requester, files, repo_id, repo_name, repo_url, default_branch):
+    """
+    Fetch committers, update timestamp, etc. for files.
+    """
+    github_client = init_github_client(requester, per_page=50)
+    repo = github_client.get_repo(full_name_or_id=repo_name)
+    for f in files:
+        db_file, created = Document.objects.get_or_create(
+            github_file_id=f.get('sha'),
+            github_repo_id=repo_id,
+            requester=requester,
+            user_id=requester.id
+        )
+        if f.get('action') == 'removed':
+            db_file.delete()
+            continue
+
+        logger.debug("Enriching github file '%s' for repo '%s' and user '%s'",
+                     f.get('filename'), repo.full_name, requester.username)
+        db_file.primary_keywords = GITHUB_PRIMARY_KEYWORDS
+        db_file.secondary_keywords = GITHUB_SECONDARY_KEYWORDS['file']
+        db_file.github_title = '{}: {}'.format(
+            'Dir' if f.get('type') == 'tree' else 'File',
+            f.get('filename').split('/')[-1]
+        )
+        db_file.github_file_path = f.get('filename')
+        db_file.github_repo_full_name = repo_name
+        db_file.webview_link = '{}/blob/{}/{}'.format(repo_url, default_branch, f.get('filename'))
+        committers = []
+        ts_set = False
+        for cmt in repo.get_commits(sha=default_branch, path=f.get('filename')):
+            if ts_set:
+                db_file.last_updated_ts = cmt.commit.committer.date.timestamp()
+                db_file.last_updated = cmt.commit.committer.date.isoformat() + 'Z'
+            c = {
+                'name': cmt.commit.committer.name
+            }
+            if cmt.committer:
+                c['url'] = cmt.committer.html_url
+                c['avatar'] = cmt.committer.avatar_url
+            committers.append(c)
+            if len(committers) >= 10:
+                break
+        db_file.github_file_committers = committers
+        algolia_engine.sync(db_file, add=created)
+
+        db_file.last_synced = _get_utc_timestamp()
+        db_file.download_status = Document.READY
+        db_file.save()
+        # add sleep of half a second to avoid breaking API rate limits
+        time.sleep(0.5)
+
+
+@shared_task
+def collect_commits(requester, repo_id, repo_name, repo_url, default_branch, commit_count):
     """
     Sync repository commits - up to the last commit that we've already synced or
-    max 150 recent commits (whichever comes first).
+    max 200 recent commits (whichever comes first).
     This is possible to do, because Github api returns commits
     sorted by commit timestamp and that old commits don't change
     (at least should not in a normally run repository).
     """
-    github_client = init_github_client(requester)
-    # simple check if we are approaching api rate limits
-    if github_client.rate_limiting[0] < 500:
-        logger.debug("Skipping github sync for user '%s' due to rate limits", requester.username)
-        return
     max_commits = 200
     was_synced = Document.objects.filter(
         user_id=requester.id,
         github_repo_id=repo_id,
         github_commit_id__isnull=False).count() >= min(commit_count, max_commits)
+
+    github_client = init_github_client(requester, per_page=20 if was_synced else 100)
+    # simple check if we are approaching api rate limits
+    if github_client.rate_limiting[0] < 500:
+        logger.debug("Skipping github sync for user '%s' due to rate limits", requester.username)
+        return
     i = 0
     for cmt in github_client.get_repo(full_name_or_id=repo_name).get_commits():
         if i >= max_commits:
@@ -158,26 +266,31 @@ def collect_commits(requester, repo_id, repo_name, commit_count):
         db_commit.last_updated_ts = cmt.commit.committer.date.timestamp()
         db_commit.last_updated = cmt.commit.committer.date.isoformat() + 'Z'
         db_commit.webview_link = cmt.html_url
-        db_commit.github_commit_title = 'Commit: {}'.format(cmt.commit.message[:50])
+        db_commit.github_title = 'Commit: {}'.format(cmt.commit.message[:50])
         db_commit.github_commit_content = cmt.commit.message
-        db_commit.github_commit_repo_name = repo_name
+        db_commit.github_repo_full_name = repo_name
         db_commit.github_commit_committer = {
-            'name': cmt.commit.committer.name,
+            'name': cmt.commit.author.name,
         }
-        if cmt.committer:
-            db_commit.github_commit_committer['url'] = cmt.committer.html_url
-            db_commit.github_commit_committer['avatar'] = cmt.committer.avatar_url
-        # get the changed/added files in this commit (up to 100 files)
+        if cmt.author:
+            db_commit.github_commit_committer['url'] = cmt.author.html_url
+            db_commit.github_commit_committer['avatar'] = cmt.author.avatar_url
+        # get the changed/added/deleted files in this commit (up to 100 files)
         files = []
         for f in cmt.files:
             files.append({
+                'sha': f.sha,
                 'filename': f.filename,
                 'url': f.blob_url,
                 'additions': f.additions,
-                'deletions': f.deletions
+                'deletions': f.deletions,
+                'action': f.status
             })
             if len(files) >= 100:
                 break
+        if was_synced and len(files) > 0:
+            subtask(enrich_files).delay(requester, files, repo_id, repo_name, repo_url, default_branch)
+
         db_commit.github_commit_files = files
         algolia_engine.sync(db_commit, add=created)
 
@@ -188,12 +301,12 @@ def collect_commits(requester, repo_id, repo_name, commit_count):
         time.sleep(0.5)
 
 
-def init_github_client(user):
+def init_github_client(user, per_page=100):
     social = user.social_auth.filter(provider='github').first()
     if not social:
         return None
     oauth_token = social.extra_data['access_token']
-    return Github(oauth_token, per_page=100)
+    return Github(oauth_token, per_page=per_page)
 
 
 def _get_utc_timestamp():
