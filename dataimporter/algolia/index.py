@@ -94,6 +94,11 @@ class DocumentIndex(object):
         'github_file_id',
         'github_file_committers',
         'github_file_path',
+        'github_issue_content',
+        'github_issue_state',
+        'github_issue_labels',
+        'github_issue_reporter',
+        'github_issue_assignees'
     ]
 
     settings = {

@@ -2,10 +2,13 @@
 Github API integration. Indexing repos, repo dirs/files (not file contents), commits, issues.
 """
 import time
+import json
 from github import Github
 from github.GithubException import UnknownObjectException
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from celery import shared_task, subtask
+import markdown
+from mdx_gfm import GithubFlavoredMarkdownExtension
 
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string
 from dataimporter.models import Document
@@ -14,7 +17,7 @@ from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
 
-GITHUB_PRIMARY_KEYWORDS = 'git, github'
+GITHUB_PRIMARY_KEYWORDS = 'git,github'
 GITHUB_SECONDARY_KEYWORDS = {
     'repo': 'repo',
     'commit': 'commit,log',
@@ -47,7 +50,7 @@ def collect_repos(requester):
     github_client = init_github_client(requester)
     # simple check if we are approaching api rate limits
     if github_client.rate_limiting[0] < 500:
-        logger.debug("Skipping github sync for user '%s' due to rate limits", requester.username)
+        logger.debug("Skipping github repos sync for user '%s' due to rate limits", requester.username)
         return
 
     for repo in github_client.get_user().get_repos():
@@ -59,6 +62,7 @@ def collect_repos(requester):
             github_repo_id=repo.id,
             github_commit_id__isnull=True,
             github_file_id__isnull=True,
+            github_issue_id__isnull=True,
             requester=requester,
             user_id=requester.id
         )
@@ -102,8 +106,9 @@ def collect_repos(requester):
                     9000,
                     step=100
                 )
-                db_repo.github_repo_content = github_client.render_markdown(
-                    text=readme_content).decode('UTF-8', errors='replace')
+                md = github_client.render_markdown(text=readme_content).decode('UTF-8', errors='replace')
+                # also replace <em> tags, because they are used by Algolia highlighting
+                db_repo.github_repo_content = md.replace('<em>', '<b>').replace('</em>', '</b>')
                 db_repo.github_repo_readme = readme.name
             except UnknownObjectException:
                 # readme does not exist
@@ -115,13 +120,109 @@ def collect_repos(requester):
         subtask(collect_commits).delay(
             requester, repo.id, repo.full_name, repo.html_url, repo.default_branch, commit_count
         )
+        # sync issues
+        subtask(collect_issues).delay(requester, repo.id, repo.full_name, created)
 
         db_repo.last_synced = _get_utc_timestamp()
         db_repo.download_status = Document.READY
         db_repo.save()
-        break
         # add sleep of one second to avoid breaking API rate limits
         time.sleep(1)
+
+
+@shared_task
+def collect_issues(requester, repo_id, repo_name, created):
+    """
+    Fetch the issues for a 'repo_name'.
+    Note that Github API considers Pull Requests as issues. Therefore, when iterating through
+    repo's issues, we get pull requests as well. At the moment, we also treat PRs as issues.
+    TODO: handle pull requests properly (changed files, commits in this PR, possibly diffs ...)
+    """
+    github_client = init_github_client(requester)
+    # simple check if we are approaching api rate limits
+    if github_client.rate_limiting[0] < 500:
+        logger.debug("Skipping github issues sync for user '%s' due to rate limits", requester.username)
+        return
+
+    repo = github_client.get_repo(full_name_or_id=repo_name)
+    search_args = {'state': 'all', 'sort': 'updated'}
+    if not created:
+        # if we are processing already synced repo, then just look for newly updated issues
+        search_args['since'] = datetime.now(timezone.utc) - timedelta(hours=6)
+
+    i = 0
+    for issue in repo.get_issues(**search_args):
+        db_issue, created = Document.objects.get_or_create(
+            github_issue_id=issue.id,
+            github_repo_id=repo_id,
+            requester=requester,
+            user_id=requester.id
+        )
+        if not created and db_issue.last_updated_ts >= issue.updated_at.timestamp():
+            continue
+        logger.debug("Processing github issue #%s for user '%s' and repo '%s'",
+                     issue.number, requester.username, repo_name)
+        db_issue.primary_keywords = GITHUB_PRIMARY_KEYWORDS
+        db_issue.secondary_keywords = GITHUB_SECONDARY_KEYWORDS['issue']
+        db_issue.last_updated_ts = issue.updated_at.timestamp()
+        db_issue.last_updated = issue.updated_at.isoformat() + 'Z'
+        db_issue.webview_link = issue.html_url
+        db_issue.github_title = '#{}: {}'.format(issue.number, issue.title)
+        if '/pull/' in issue.html_url:
+            # pull request
+            db_issue.github_title = 'PR {}'.format(db_issue.github_title)
+        comments = []
+        if issue.comments > 0:
+            for comment in issue.get_comments():
+                comments.append({
+                    'body': _to_html(comment.body),
+                    'timestamp': comment.updated_at.timestamp(),
+                    'author': {
+                        'name': comment.user.login,
+                        'avatar': comment.user.avatar_url,
+                        'url': comment.user.html_url
+                    }
+                })
+                # only list up to 20 comments
+                if len(comments) >= 20:
+                    break
+
+        content = {
+            'body': _to_html(issue.body),
+            'comments': comments
+        }
+        # take care of Algolia 10k limit
+        while len(json.dumps(content).encode('UTF-8')) > 9000:
+            if len(content['comments']) < 1:
+                content['body'] = cut_utf_string(content['body'], 9000, step=100)
+                break
+            content['comments'] = content['comments'][:-1]
+
+        db_issue.github_issue_content = content
+        db_issue.github_repo_full_name = repo_name
+        db_issue.github_issue_state = issue.state
+        db_issue.github_issue_labels = [x.name for x in issue.labels]
+        db_issue.github_issue_reporter = {
+            'name': issue.user.login,
+            'avatar': issue.user.avatar_url,
+            'url': issue.user.html_url
+        }
+        db_issue.github_issue_assignees = []
+        for assignee in issue.assignees:
+            db_issue.github_issue_assignees.append({
+                'name': assignee.login,
+                'avatar': assignee.avatar_url,
+                'url': assignee.html_url
+            })
+
+        algolia_engine.sync(db_issue, add=created)
+        db_issue.last_synced = _get_utc_timestamp()
+        db_issue.download_status = Document.READY
+        db_issue.save()
+        # add sleep of 5 seconds every 50 issues to avoid breaking API rate limits
+        i = i + 1
+        if i % 50 == 0:
+            time.sleep(5)
 
 
 @shared_task
@@ -150,7 +251,8 @@ def collect_files(requester, repo_id, repo_name, repo_url, default_branch):
             new_files.append({
                 'sha': f.sha,
                 'filename': f.path,
-                'action': 'modified'
+                'action': 'modified',
+                'type': f.type
             })
             db_file.primary_keywords = GITHUB_PRIMARY_KEYWORDS
             db_file.secondary_keywords = GITHUB_SECONDARY_KEYWORDS['file']
@@ -200,18 +302,22 @@ def enrich_files(requester, files, repo_id, repo_name, repo_url, default_branch)
         db_file.github_repo_full_name = repo_name
         db_file.webview_link = '{}/blob/{}/{}'.format(repo_url, default_branch, f.get('filename'))
         committers = []
+        seen = set()
         ts_set = False
         for cmt in repo.get_commits(sha=default_branch, path=f.get('filename')):
-            if ts_set:
+            if not ts_set:
                 db_file.last_updated_ts = cmt.commit.committer.date.timestamp()
                 db_file.last_updated = cmt.commit.committer.date.isoformat() + 'Z'
-            c = {
-                'name': cmt.commit.committer.name
-            }
-            if cmt.committer:
-                c['url'] = cmt.committer.html_url
-                c['avatar'] = cmt.committer.avatar_url
-            committers.append(c)
+                ts_set = True
+            if cmt.commit.committer.name not in seen:
+                c = {
+                    'name': cmt.commit.committer.name
+                }
+                if cmt.committer:
+                    c['url'] = cmt.committer.html_url
+                    c['avatar'] = cmt.committer.avatar_url
+                committers.append(c)
+                seen.add(cmt.commit.committer.name)
             if len(committers) >= 10:
                 break
         db_file.github_file_committers = committers
@@ -220,8 +326,8 @@ def enrich_files(requester, files, repo_id, repo_name, repo_url, default_branch)
         db_file.last_synced = _get_utc_timestamp()
         db_file.download_status = Document.READY
         db_file.save()
-        # add sleep of half a second to avoid breaking API rate limits
-        time.sleep(0.5)
+        # add sleep to avoid breaking API rate limits
+        time.sleep(1.5)
 
 
 @shared_task
@@ -238,12 +344,12 @@ def collect_commits(requester, repo_id, repo_name, repo_url, default_branch, com
         user_id=requester.id,
         github_repo_id=repo_id,
         github_commit_id__isnull=False).count() >= min(commit_count, max_commits)
-
     github_client = init_github_client(requester, per_page=20 if was_synced else 100)
     # simple check if we are approaching api rate limits
     if github_client.rate_limiting[0] < 500:
-        logger.debug("Skipping github sync for user '%s' due to rate limits", requester.username)
+        logger.debug("Skipping github commits sync for user '%s' due to rate limits", requester.username)
         return
+
     i = 0
     for cmt in github_client.get_repo(full_name_or_id=repo_name).get_commits():
         if i >= max_commits:
@@ -307,6 +413,12 @@ def init_github_client(user, per_page=100):
         return None
     oauth_token = social.extra_data['access_token']
     return Github(oauth_token, per_page=per_page)
+
+
+def _to_html(markdown_text):
+    # convert markdown to html (replace any <em> tags with bold tags, because <em> is reserved by Algolia
+    md = markdown.markdown(markdown_text, extensions=[GithubFlavoredMarkdownExtension()])
+    return md.replace('<em>', '<b>').replace('</em>', '</b>')
 
 
 def _get_utc_timestamp():
