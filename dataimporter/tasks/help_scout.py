@@ -4,7 +4,7 @@ The 'while True' loops are there because of how helpscout api library works when
 """
 import json
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from dateutil.parser import parse as parse_dt
 from celery import shared_task, subtask
 
@@ -22,10 +22,10 @@ HELPSCOUT_KEYWORDS = {
 }
 
 
-def start_synchronization(user):
+def start_synchronization(user, update=False):
     """ Run initial syncing of deals data in pipedrive. """
     if should_sync(user, 'helpscout-apikeys', 'tasks.help_scout'):
-        collect_customers.delay(requester=user)
+        collect_customers.delay(requester=user, update=update)
     else:
         logger.info("Helpscout api key for user '%s' already in use, skipping sync ...", user.username)
 
@@ -38,11 +38,11 @@ def update_synchronization():
     Should be run periodically to keep the data fresh in our db.
     """
     for us in UserSocialAuth.objects.filter(provider='helpscout-apikeys'):
-        start_synchronization(user=us.user)
+        start_synchronization(user=us.user, update=True)
 
 
 @shared_task
-def collect_customers(requester):
+def collect_customers(requester, update):
     helpscout_client = init_helpscout_client(requester)
     if not helpscout_client:
         logger.warn("User is missing Helpscout API key", requester.username)
@@ -71,42 +71,68 @@ def collect_customers(requester):
                 'avatar': u.photourl
             }
 
+    since_iso = None
+    if update:
+        customer_ids = set()
+        # check for new stuff since last 6 hours only
+        since = _get_utc_timestamp() - timedelta(hours=6)
+        # this abomination is needed, because Helpscout API chokes on iso dates with milliseconds and/or timezones
+        since_iso = since.isoformat().split('.')[0] + 'Z'
+        for box in mailboxes:
+            helpscout_client.clearstate()
+            while True:
+                cons = helpscout_client.conversations_for_mailbox(mailbox_id=box, modifiedSince=since_iso)
+                if not cons or cons.count < 1:
+                    break
+                for con in cons:
+                    customer_ids.add(con.customer.get('id'))
+        for cid in customer_ids:
+            # process customer
+            customer = helpscout_client.customer(customer_id=cid)
+            _process_customer(requester, customer, mailboxes, folders, users)
+            # add sleep to avoid breaking API rate limits
+            time.sleep(2)
+
     while True:
-        customers = helpscout_client.customers()
+        customers = helpscout_client.customers(modifiedSince=since_iso) if update else helpscout_client.customers()
         if not customers or customers.count < 1:
             break
         for customer in customers:
-            if customer.id is None or (customer.emails is None and customer.fullname is None):
-                # can't use customer with no data
-                logger.debug("Customer '%s' for user '%s' cannot be used - no data",
-                             (customer.id or customer.fullname), requester.username)
-                continue
-            db_customer, created = Document.objects.get_or_create(
-                helpscout_customer_id=customer.id,
-                requester=requester,
-                user_id=requester.id
-            )
-            db_customer.helpscout_name = customer.fullname
-            logger.debug("Processing Helpscout customer '%s' for user '%s'", customer.fullname, requester.username)
-            new_updated = customer.modifiedat
-            new_updated_ts = parse_dt(new_updated).timestamp()
-            if not created and db_customer.last_updated_ts:
-                new_updated_ts = db_customer.last_updated_ts \
-                    if db_customer.last_updated_ts > new_updated_ts else new_updated_ts
-            db_customer.last_updated = datetime.utcfromtimestamp(new_updated_ts).isoformat() + 'Z'
-            db_customer.last_updated_ts = new_updated_ts
-            db_customer.helpscout_title = 'User: {}'.format(customer.fullname)
-            db_customer.webview_link = 'https://secure.helpscout.net/customer/{}/0/'.format(customer.id)
-            db_customer.primary_keywords = HELPSCOUT_KEYWORDS['primary']
-            db_customer.secondary_keywords = HELPSCOUT_KEYWORDS['secondary']
-            db_customer.helpscout_company = customer.organization
-            db_customer.helpscout_emails = ', '.join(customer.emails) if customer.emails else None
-            db_customer.save()
-            if created:
-                algolia_engine.sync(db_customer, add=created)
-            subtask(process_customer).delay(requester, db_customer, mailboxes, folders, users)
-            # add sleep of one second to avoid breaking API rate limits
+            _process_customer(requester, customer, mailboxes, folders, users)
+            # add sleep to avoid breaking API rate limits
             time.sleep(2)
+
+
+def _process_customer(requester, customer, mailboxes, folders, users):
+    if customer.id is None or (customer.emails is None and customer.fullname is None):
+        # can't use customer with no data
+        logger.debug("Customer '%s' for user '%s' cannot be used - no data",
+                     (customer.id or customer.fullname), requester.username)
+        return
+    db_customer, created = Document.objects.get_or_create(
+        helpscout_customer_id=customer.id,
+        requester=requester,
+        user_id=requester.id
+    )
+    db_customer.helpscout_name = customer.fullname
+    logger.debug("Processing Helpscout customer '%s' for user '%s'", customer.fullname, requester.username)
+    new_updated = customer.modifiedat
+    new_updated_ts = parse_dt(new_updated).timestamp()
+    if not created and db_customer.last_updated_ts:
+        new_updated_ts = db_customer.last_updated_ts \
+            if db_customer.last_updated_ts > new_updated_ts else new_updated_ts
+    db_customer.last_updated = datetime.utcfromtimestamp(new_updated_ts).isoformat() + 'Z'
+    db_customer.last_updated_ts = new_updated_ts
+    db_customer.helpscout_title = 'User: {}'.format(customer.fullname)
+    db_customer.webview_link = 'https://secure.helpscout.net/customer/{}/0/'.format(customer.id)
+    db_customer.primary_keywords = HELPSCOUT_KEYWORDS['primary']
+    db_customer.secondary_keywords = HELPSCOUT_KEYWORDS['secondary']
+    db_customer.helpscout_company = customer.organization
+    db_customer.helpscout_emails = ', '.join(
+        e.get('value') for e in customer.emails if 'value' in e) if customer.emails else None
+    db_customer.save()
+    algolia_engine.sync(db_customer, add=created)
+    subtask(process_customer).delay(requester, db_customer, mailboxes, folders, users)
 
 
 @shared_task
