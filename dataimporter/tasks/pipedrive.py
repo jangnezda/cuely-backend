@@ -115,8 +115,8 @@ def build_deal_content(deal, users, org_domain, pipe_client):
                     'email': email,
                     'url': 'https://{}.pipedrive.com/person/{}'.format(org_domain, participant.id)
                 })
-    # users
-    pipe_user = users.get(deal.user_id.get('id', 0))
+    # users ... another Pipedrive api weirdness: sometimes user_id is integer, sometimes dict
+    pipe_user = users.get(deal.user_id.get('id', 0) if isinstance(deal.user_id, dict) else deal.user_id)
     if pipe_user:
         content['users'].append({
             'name': pipe_user.name,
