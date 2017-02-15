@@ -5,13 +5,14 @@ from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
 from django.conf import settings
 
-from dataimporter.models import Document, UserAttributes
+from dataimporter.models import Document, UserAttributes, DeletedUser
 from dataimporter.tasks.gdrive import start_synchronization as gdrive_sync
 from dataimporter.tasks.pipedrive import start_synchronization as pipedrive_sync
 from dataimporter.tasks.help_scout import start_synchronization as helpscout_sync
 from dataimporter.tasks.help_scout_docs import start_synchronization as helpscout_docs_sync
 from dataimporter.tasks.jira import start_synchronization as jira_sync
 from dataimporter.tasks.github import start_synchronization as github_sync
+from dataimporter.tasks.admin import purge_documents
 
 import logging
 logger = logging.getLogger(__name__)
@@ -164,6 +165,33 @@ def update_segment_status(request):
         return JsonResponse({
             'status': 'Ok',
             'message': 'Saved segment status'
+        })
+    else:
+        return HttpResponseForbidden()
+
+
+@require_POST
+def delete_user(request):
+    if request.user.is_authenticated:
+        request.user.is_active = False
+        request.user.save()
+
+        request.user.social_auth.all().delete()
+        request.user.socialattributes_set.all().delete()
+        request.user.userattributes.delete()
+
+        du = DeletedUser()
+        du.user_id = request.user.id
+        du.email = request.user.email
+        du.save()
+
+        # wipe the associated documents in a separate task
+        # (can take a long time, but we need to return from this function asap)
+        purge_documents.delay(request.user, remove_user=True)
+
+        return JsonResponse({
+            'status': 'Ok',
+            'message': 'Removed user with id {}'.format(request.user.id)
         })
     else:
         return HttpResponseForbidden()

@@ -65,6 +65,13 @@ class UserAttributes(models.Model):
     algolia_key = models.CharField(max_length=1000, blank=True, null=True)
 
 
+class DeletedUser(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    user_id = models.IntegerField()
+    email = models.CharField(max_length=200, blank=True, null=True)
+
+
 class AlgoliaIndex(models.Model):
     DOCUMENT = 0
     MODEL_TYPE = (

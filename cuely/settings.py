@@ -201,6 +201,7 @@ CELERY_IMPORTS = (
     'dataimporter.tasks.pipedrive',
     'dataimporter.tasks.jira',
     'dataimporter.tasks.github',
+    'dataimporter.tasks.admin',
 )
 
 CELERY_BROKER_URL = 'redis://' + os.environ['REDIS_ENDPOINT'] + ':6379/0'

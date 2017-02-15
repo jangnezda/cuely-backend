@@ -128,6 +128,7 @@ def collect_repos(requester):
         db_repo.save()
         # add sleep of one second to avoid breaking API rate limits
         time.sleep(1)
+        break
 
 
 @shared_task

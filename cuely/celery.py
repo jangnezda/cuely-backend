@@ -39,6 +39,9 @@ class IntegrationsRouter(object):
     def route_for_task(self, task, args=None, kwargs=None):
         if any(task.startswith(x) for x in settings.CELERY_IMPORTS):
             queue = task.split('.')[-2]
+            if queue == 'admin':
+                return 'default'
+
             if queue_full(queue):
                 logger.debug("Queue %s is full, routing %s to default queue", queue, task)
                 return 'default'
