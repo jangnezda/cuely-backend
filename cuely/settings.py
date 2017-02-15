@@ -245,7 +245,7 @@ CELERYBEAT_SCHEDULE = {
     },
     'sync-github': {
         'task': 'dataimporter.tasks.github.update_synchronization',
-        'schedule': timedelta(seconds=300),
+        'schedule': timedelta(seconds=570),
     }
 }
 

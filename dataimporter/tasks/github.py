@@ -265,7 +265,7 @@ def collect_files(requester, repo_id, repo_name, repo_url, default_branch):
             db_file.webview_link = '{}/blob/{}/{}'.format(repo_url, default_branch, f.path)
             algolia_engine.sync(db_file, add=created)
         db_file.last_synced = _get_utc_timestamp()
-        db_file.download_status = Document.READY
+        db_file.download_status = Document.PENDING
         db_file.save()
     # run enrich_files() for all new_files in chunks of 50 items
     for ff in [new_files[x:x + 50] for x in range(0, len(new_files), 50)]:

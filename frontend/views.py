@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
@@ -83,28 +84,31 @@ def sync_status(request):
         helpscout = 'helpscout' in provider and not helpscout_docs
         jira = 'jira' in provider
         github = 'github' in provider
-        documents_count = Document.objects.filter(
-            requester=user,
-            document_id__isnull=not gdrive,
-            pipedrive_deal_id__isnull=not pipedrive,
-            helpscout_customer_id__isnull=not helpscout,
-            helpscout_document_id__isnull=not helpscout_docs,
-            jira_issue_key__isnull=not jira,
-            github_repo_id__isnull=not github
-        ).count()
-        documents_ready_count = Document.objects.filter(
-            requester=user,
-            document_id__isnull=not gdrive,
-            pipedrive_deal_id__isnull=not pipedrive,
-            helpscout_customer_id__isnull=not helpscout,
-            helpscout_document_id__isnull=not helpscout_docs,
-            jira_issue_key__isnull=not jira,
-            github_repo_id__isnull=not github,
-            download_status=Document.READY).count()
+        filter_args = {
+            'requester': user,
+            'document_id__isnull': not gdrive,
+            'pipedrive_deal_id__isnull': not pipedrive,
+            'helpscout_customer_id__isnull': not helpscout,
+            'helpscout_document_id__isnull': not helpscout_docs,
+            'jira_issue_key__isnull': not jira,
+            'github_repo_id__isnull': not github
+        }
+        documents_count = Document.objects.filter(**filter_args).count()
+        filter_args['download_status'] = Document.READY
+        documents_ready_count = Document.objects.filter(**filter_args).count()
+        # to avoid premature 'integration synced' notification, check also that the
+        # last synced document is at least 5 minutes old
+        document_last_synced = Document.objects.filter(**filter_args).order_by('-last_synced').first()
+        ts_done = False
+        if document_last_synced:
+            last_synced = document_last_synced.last_synced.timestamp()
+            now = datetime.now(timezone.utc).astimezone().timestamp()
+            ts_done = (now - last_synced) / 60.0 >= 5
+
         return JsonResponse({
             "documents": documents_count,
             "ready": documents_ready_count,
-            "in_progress": documents_count - documents_ready_count > 0,
+            "in_progress": documents_count - documents_ready_count > 0 or not ts_done,
             "has_started": documents_count > 0
         })
     else:
