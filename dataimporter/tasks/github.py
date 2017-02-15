@@ -53,6 +53,7 @@ def collect_repos(requester):
         logger.debug("Skipping github repos sync for user '%s' due to rate limits", requester.username)
         return
 
+    i = 0
     for repo in github_client.get_user().get_repos():
         if not (repo.id or repo.full_name):
             logger.debug("Skipping github repo '%s' for user '%s'", repo.full_name, requester.username)
@@ -95,6 +96,7 @@ def collect_repos(requester):
         db_repo.github_repo_full_name = repo.full_name
         new_timestamp = max(repo.updated_at, repo.pushed_at)
         if created or new_timestamp.timestamp() > (db_repo.last_updated_ts or 0):
+            i = i + 1
             db_repo.last_updated_ts = new_timestamp.timestamp()
             db_repo.last_updated = new_timestamp.isoformat() + 'Z'
             db_repo.webview_link = repo.html_url
@@ -114,20 +116,24 @@ def collect_repos(requester):
                 # readme does not exist
                 db_repo.github_repo_content = None
             algolia_engine.sync(db_repo, add=created)
-            # sync files
-            subtask(collect_files).delay(requester, repo.id, repo.full_name, repo.html_url, repo.default_branch)
+            if created:
+                # sync files
+                subtask(collect_files).apply_async(
+                    args=[requester, repo.id, repo.full_name, repo.html_url, repo.default_branch], countdown=300 * i)
         # sync commits
-        subtask(collect_commits).delay(
-            requester, repo.id, repo.full_name, repo.html_url, repo.default_branch, commit_count
+        subtask(collect_commits).apply_async(
+            args=[requester, repo.id, repo.full_name, repo.html_url, repo.default_branch, commit_count],
+            countdown=180 * i if created else 1
         )
         # sync issues
-        subtask(collect_issues).delay(requester, repo.id, repo.full_name, created)
+        subtask(collect_issues).apply_async(
+            args=[requester, repo.id, repo.full_name, created],
+            countdown=180 * i if created else 1
+        )
 
         db_repo.last_synced = _get_utc_timestamp()
         db_repo.download_status = Document.READY
         db_repo.save()
-        # add sleep of one second to avoid breaking API rate limits
-        time.sleep(1)
 
 
 @shared_task
@@ -219,10 +225,10 @@ def collect_issues(requester, repo_id, repo_name, created):
         db_issue.last_synced = _get_utc_timestamp()
         db_issue.download_status = Document.READY
         db_issue.save()
-        # add sleep of 5 seconds every 50 issues to avoid breaking API rate limits
+        # add sleep every 50 issues to avoid breaking API rate limits
         i = i + 1
         if i % 50 == 0:
-            time.sleep(5)
+            time.sleep(20)
 
 
 @shared_task
@@ -268,8 +274,11 @@ def collect_files(requester, repo_id, repo_name, repo_url, default_branch):
         db_file.download_status = Document.PENDING
         db_file.save()
     # run enrich_files() for all new_files in chunks of 50 items
+    i = 0
     for ff in [new_files[x:x + 50] for x in range(0, len(new_files), 50)]:
-        subtask(enrich_files).delay(requester, ff, repo.id, repo.full_name, repo_url, default_branch)
+        i = i + 1
+        subtask(enrich_files).apply_async(
+            args=[requester, ff, repo.id, repo.full_name, repo_url, default_branch], countdown=120 * i)
 
 
 @shared_task
@@ -327,7 +336,7 @@ def enrich_files(requester, files, repo_id, repo_name, repo_url, default_branch)
         db_file.download_status = Document.READY
         db_file.save()
         # add sleep to avoid breaking API rate limits
-        time.sleep(1.5)
+        time.sleep(2)
 
 
 @shared_task
