@@ -137,7 +137,7 @@ def build_deal_content(deal, users, org_domain, pipe_client):
     # activities
     if deal.done_activities_count > 0:
         for activity in pipe_client.ActivityDeal.fetch_all(filter_id=deal.id):
-            if activity.done:
+            if activity.done and activity.marked_as_done_time:
                 new_activity = {
                     'subject': activity.subject,
                     'type': activity.type,

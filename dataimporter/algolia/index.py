@@ -76,6 +76,29 @@ class DocumentIndex(object):
         'jira_project_name',
         'jira_project_key',
         'jira_project_link',
+
+        # Github
+        'github_repo_id',
+        'github_title',
+        'github_repo_owner',
+        'github_repo_full_name',
+        'github_repo_description',
+        'github_repo_contributors',
+        'github_repo_content',
+        'github_repo_readme',
+        'github_repo_commit_count',
+        'github_commit_id',
+        'github_commit_content',
+        'github_commit_committer',
+        'github_commit_files',
+        'github_file_id',
+        'github_file_committers',
+        'github_file_path',
+        'github_issue_content',
+        'github_issue_state',
+        'github_issue_labels',
+        'github_issue_reporter',
+        'github_issue_assignees'
     ]
 
     settings = {

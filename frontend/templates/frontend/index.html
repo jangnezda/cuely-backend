@@ -9,12 +9,22 @@
   <div class="panel-heading">Manage integrations</div>
   <div class="panel-body">
     {% if "google-oauth2" not in backends %}
-      <a class="btn btn-block btn-social btn-google" href="/login/google-oauth2?next=/home/auth_complete/google-oauth">
-        <span class="fa fa-google"></span> Add Google Drive integration
+      <a class="btn btn-block btn-social btn-google" href="/login/google-oauth2?next=/home/auth_complete/google-oauth2">
+        <span class="fa fa-google"></span>Add Google Drive integration
       </a>
     {% else %}
       <a class="btn disabled btn-block btn-social btn-google" href="#">
-        <span class="fa fa-google"></span> Google Drive integration is ready
+        <span class="fa fa-google"></span>Google Drive integration is ready
+      </a>
+    {% endif %}
+
+    {% if "github" not in backends %}
+      <a class="btn btn-block btn-social btn-github" href="/login/github?next=/home/auth_complete/github">
+        <span class="fa fa-github"></span>Add Github integration
+      </a>
+    {% else %}
+      <a class="btn disabled btn-block btn-social btn-github" href="#">
+        <span class="fa fa-github"></span>Github integration is ready
       </a>
     {% endif %}
 
@@ -65,13 +75,17 @@
   <div class="panel-heading">
     <p style="width: 100%; text-align: center; font-weight: 600">Welcome to Cuely search app</p>
 		<p>
-			Please authenticate with your Google account to start using the app.
-      Cuely will begin syncing with your Google Drive after signing in.
+			Please authenticate with your Google or Github account to start using the app.
+      Cuely will begin syncing with your Google Drive (or Github) account after signing in.
 		</p>
   </div>
   <div class="panel-body" style="text-align: center;padding: 50px;">
 		<a href="/login/google-oauth2/?next=/home/auth_complete/google-oauth2">
 			<img src="{% static "frontend/btn_google_signin_dark_normal_web.png" %}" />
+		</a>
+    <hr>
+		<a href="/login/github/?next=/home/auth_complete/github">
+			<img src="{% static "frontend/sign-in-with-github.png" %}" />
 		</a>
 	</div>
 </div>
