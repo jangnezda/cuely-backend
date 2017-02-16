@@ -164,7 +164,7 @@ def collect_issues(requester, repo_id, repo_name, created):
             requester=requester,
             user_id=requester.id
         )
-        if not created and db_issue.last_updated_ts >= issue.updated_at.timestamp():
+        if not created and db_issue.last_updated_ts and db_issue.last_updated_ts >= issue.updated_at.timestamp():
             continue
         logger.debug("Processing github issue #%s for user '%s' and repo '%s'",
                      issue.number, requester.username, repo_name)
