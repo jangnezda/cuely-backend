@@ -278,7 +278,7 @@ def collect_files(requester, repo_id, repo_name, repo_url, default_branch, enric
     for ff in [new_files[x:x + 50] for x in range(0, len(new_files), 50)]:
         i = i + 1
         subtask(enrich_files).apply_async(
-            args=[requester, ff, repo.id, repo.full_name, repo_url, default_branch],
+            args=[requester, ff, repo.id, repo_name, repo_url, default_branch],
             countdown=enrichment_delay + (240 * i)
         )
 
@@ -302,7 +302,7 @@ def enrich_files(requester, files, repo_id, repo_name, repo_url, default_branch)
             continue
 
         logger.debug("Enriching github file '%s' for repo '%s' and user '%s'",
-                     f.get('filename'), repo.full_name, requester.username)
+                     f.get('filename'), repo_name, requester.username)
         db_file.primary_keywords = GITHUB_PRIMARY_KEYWORDS
         db_file.secondary_keywords = GITHUB_SECONDARY_KEYWORDS['file']
         db_file.github_title = '{}: {}'.format(
