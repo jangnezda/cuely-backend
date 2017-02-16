@@ -118,8 +118,7 @@ def collect_repos(requester):
             algolia_engine.sync(db_repo, add=created)
             if created:
                 # sync files
-                subtask(collect_files).apply_async(
-                    args=[requester, repo.id, repo.full_name, repo.html_url, repo.default_branch], countdown=300 * i)
+                subtask(collect_files).delay(requester, repo.id, repo.full_name, repo.html_url, repo.default_branch)
         # sync commits
         subtask(collect_commits).apply_async(
             args=[requester, repo.id, repo.full_name, repo.html_url, repo.default_branch, commit_count],
@@ -278,7 +277,7 @@ def collect_files(requester, repo_id, repo_name, repo_url, default_branch):
     for ff in [new_files[x:x + 50] for x in range(0, len(new_files), 50)]:
         i = i + 1
         subtask(enrich_files).apply_async(
-            args=[requester, ff, repo.id, repo.full_name, repo_url, default_branch], countdown=120 * i)
+            args=[requester, ff, repo.id, repo.full_name, repo_url, default_branch], countdown=240 * i)
 
 
 @shared_task
