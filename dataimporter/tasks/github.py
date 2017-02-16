@@ -3,6 +3,7 @@ Github API integration. Indexing repos, repo dirs/files (not file contents), com
 """
 import time
 import json
+import hashlib
 from github import Github
 from github.GithubException import UnknownObjectException
 from datetime import datetime, timezone, timedelta
@@ -123,7 +124,7 @@ def collect_repos(requester):
         # sync commits
         subtask(collect_commits).apply_async(
             args=[requester, repo.id, repo.full_name, repo.html_url, repo.default_branch, commit_count],
-            countdown=180 * i if created else 1
+            countdown=240 * i if created else 1
         )
         # sync issues
         subtask(collect_issues).apply_async(
@@ -248,7 +249,7 @@ def collect_files(requester, repo_id, repo_name, repo_url, default_branch, enric
     new_files = []
     for f in repo.get_git_tree(sha=repo.default_branch, recursive=True).tree:
         db_file, created = Document.objects.get_or_create(
-            github_file_id=f.sha,
+            github_file_id=_compute_sha('{}{}'.format(repo_id, f.path)),
             github_repo_id=repo_id,
             requester=requester,
             user_id=requester.id
@@ -289,10 +290,20 @@ def enrich_files(requester, files, repo_id, repo_name, repo_url, default_branch)
     Fetch committers, update timestamp, etc. for files.
     """
     github_client = init_github_client(requester, per_page=50)
+    # simple check if we are approaching api rate limits
+    if github_client.rate_limiting[0] < 500:
+        # reschedule after 10 minutes
+        logger.debug("Skipping github enrich files for user '%s' due to rate limits", requester.username)
+        subtask(enrich_files).apply_async(
+            args=[requester, files, repo_id, repo_name, repo_url, default_branch],
+            countdown=600
+        )
+        return
+
     repo = github_client.get_repo(full_name_or_id=repo_name)
     for f in files:
         db_file, created = Document.objects.get_or_create(
-            github_file_id=f.get('sha'),
+            github_file_id=_compute_sha('{}{}'.format(repo_id, f.get('filename'))),
             github_repo_id=repo_id,
             requester=requester,
             user_id=requester.id
@@ -432,6 +443,12 @@ def _to_html(markdown_text):
     # convert markdown to html (replace any <em> tags with bold tags, because <em> is reserved by Algolia
     md = markdown.markdown(markdown_text, extensions=[GithubFlavoredMarkdownExtension()])
     return md.replace('<em>', '<b>').replace('</em>', '</b>')
+
+
+def _compute_sha(value):
+    sha = hashlib.sha1()
+    sha.update(bytes(value, 'utf-8'))
+    return sha.hexdigest()
 
 
 def _get_utc_timestamp():
