@@ -427,6 +427,8 @@ def init_github_client(user, per_page=100):
 
 
 def _to_html(markdown_text):
+    if not markdown_text:
+        return None
     # convert markdown to html (replace any <em> tags with bold tags, because <em> is reserved by Algolia
     md = markdown.markdown(markdown_text, extensions=[GithubFlavoredMarkdownExtension()])
     return md.replace('<em>', '<b>').replace('</em>', '</b>')
