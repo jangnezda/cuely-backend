@@ -230,7 +230,7 @@ CELERYBEAT_SCHEDULE = {
     },
     'sync-pipedrive': {
         'task': 'dataimporter.tasks.pipedrive.update_synchronization',
-        'schedule': timedelta(seconds=590),
+        'schedule': timedelta(seconds=800),
     },
     'sync-helpscout': {
         'task': 'dataimporter.tasks.help_scout.update_synchronization',
