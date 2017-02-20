@@ -103,6 +103,7 @@ def collect_issues(requester, sync_update=False):
                 db_issue.jira_project_name = project_name
                 db_issue.jira_project_key = project_key
                 db_issue.jira_project_link = project_url
+                db_issue.last_synced = _get_utc_timestamp()
                 db_issue.download_status = Document.READY
                 db_issue.save()
                 algolia_engine.sync(db_issue, add=created)

@@ -101,7 +101,7 @@ def sync_status(request):
         # last synced document is at least 5 minutes old
         document_last_synced = Document.objects.filter(**filter_args).order_by('-last_synced').first()
         ts_done = False
-        if document_last_synced:
+        if document_last_synced and document_last_synced.last_synced:
             last_synced = document_last_synced.last_synced.timestamp()
             now = datetime.now(timezone.utc).astimezone().timestamp()
             ts_done = (now - last_synced) / 60.0 >= 5
