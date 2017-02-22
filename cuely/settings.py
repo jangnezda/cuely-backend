@@ -127,6 +127,7 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTHENTICATION_BACKENDS = (
     'social.backends.google.GoogleOAuth2',
     'social.backends.github.GithubOAuth2',
+    'dataimporter.auth.TrelloOAuthFixed',
     'dataimporter.auth.PipedriveApiKeysAuth',
     'dataimporter.auth.HelpscoutApiKeysAuth',
     'dataimporter.auth.HelpscoutDocsApiKeysAuth',
@@ -146,6 +147,11 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
 SOCIAL_AUTH_GITHUB_KEY = os.environ['GITHUB_API_CLIENT_ID']
 SOCIAL_AUTH_GITHUB_SECRET = os.environ['GITHUB_API_CLIENT_SECRET']
 SOCIAL_AUTH_GITHUB_SCOPE = ['repo', 'user:email']
+
+SOCIAL_AUTH_TRELLO_KEY = 'd4c59e8f823d60c2f7e349e0c330fa91'
+SOCIAL_AUTH_TRELLO_SECRET = '85a90835553e69bd06d78cd36a60e2184d16ca8ac80d1f076b5385228b92cfa1'
+SOCIAL_AUTH_TRELLO_APP_NAME = 'Cuely'
+SOCIAL_AUTH_TRELLO_SCOPE = ['read', 'write', 'account']
 
 SOCIAL_AUTH_PIPEDRIVE_APIKEYS_FORM_URL = '/home/pipedrive_apikeys/'
 

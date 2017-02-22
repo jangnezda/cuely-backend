@@ -2,6 +2,7 @@ from oauthlib.oauth1 import SIGNATURE_RSA
 from requests_oauthlib import OAuth1Session
 
 from social.backends.legacy import LegacyAuth
+from social.backends.trello import TrelloOAuth
 from social.exceptions import AuthMissingParameter, AuthException
 from django.conf import settings
 from dataimporter.models import UserAttributes
@@ -138,3 +139,7 @@ class JiraOAuth(LegacyAuth):
             }
             kwargs.update({'response': user_data, 'backend': self})
             return self.strategy.authenticate(*args, **kwargs)
+
+
+class TrelloOAuthFixed(TrelloOAuth):
+    SCOPE_SEPARATOR = ','

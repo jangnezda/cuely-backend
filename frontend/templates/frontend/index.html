@@ -28,6 +28,16 @@
       </a>
     {% endif %}
 
+    {% if "trello" not in backends %}
+      <a class="btn btn-block btn-social btn-instagram" href="/login/trello?next=/home/auth_complete/trello">
+        <img src="{% static "frontend/trello-mark-white.png" %}" style="padding: 3px">Add Trello integration
+      </a>
+    {% else %}
+      <a class="btn disabled btn-block btn-social btn-instagram" href="#">
+        <img src="{% static "frontend/trello-mark-white.png" %}" style="padding: 3px">Trello integration is ready
+      </a>
+    {% endif %}
+
     {% if "pipedrive-apikeys" not in backends %}
       <a class="btn btn-block btn-social btn-vk" href="/login/pipedrive-apikeys?next=/home/auth_complete/pipedrive-apikeys">
         <img src="{% static "frontend/pipedrive-logo.png" %}" style="padding: 3px">Add Pipedrive integration
@@ -81,6 +91,10 @@
   </div>
   <div class="panel-body" style="text-align: center;padding: 50px;">
 		<a href="/login/google-oauth2/?next=/home/auth_complete/google-oauth2">
+			<img src="{% static "frontend/btn_google_signin_dark_normal_web.png" %}" />
+		</a>
+    <hr>
+		<a href="/login/trello/?next=/home/auth_complete/trello">
 			<img src="{% static "frontend/btn_google_signin_dark_normal_web.png" %}" />
 		</a>
     <hr>
