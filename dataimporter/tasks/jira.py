@@ -62,7 +62,7 @@ def collect_issues(requester, sync_update=False):
             if i == old_i:
                 break
             old_i = i
-            for issue in jira.search_issues(jql, startAt=i, maxResults=25):
+            for issue in jira.search_issues(jql, startAt=i, maxResults=25, validate_query=False):
                 i = i + 1
                 db_issue, created = Document.objects.get_or_create(
                     jira_issue_key=issue.key,
