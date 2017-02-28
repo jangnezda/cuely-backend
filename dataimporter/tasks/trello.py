@@ -54,8 +54,20 @@ def collect_boards(requester):
             requester=requester,
             user_id=requester.id
         )
-        last_activity = parse_dt(board.raw.get('dateLastActivity')).isoformat() + 'Z'
-        last_activity_ts = parse_dt(board.raw.get('dateLastActivity')).timestamp()
+        board_last_activity = board.raw.get('dateLastActivity')
+        if not board_last_activity:
+            # this nasty hack is needed, becuse some Trello boards don't have 'dateLastActivity' timestamp
+            # -> looks like it's those boards that have been inactive for some time
+            if not created:
+                board_last_activity = db_board.last_updated.isoformat()
+            else:
+                # Trello was established in 2011, so we use 01.01.2011 as epoch
+                actions = board.fetch_actions(action_filter='all', action_limit=1, since='2011-01-01T00:00:00.000Z')
+                if actions:
+                    board_last_activity = actions[0].get('date')
+
+        last_activity = parse_dt(board_last_activity).isoformat()
+        last_activity_ts = int(parse_dt(board_last_activity).timestamp())
         if not created and db_board.last_updated_ts and db_board.last_updated_ts >= last_activity_ts:
             logger.debug("Trello board '%s' for user '%s' hasn't changed", board.name, requester.username)
             continue
@@ -66,31 +78,39 @@ def collect_boards(requester):
         db_board.last_updated_ts = last_activity_ts
         db_board.trello_title = board.name
         db_board.webview_link = board.url
-        db_board.content = board.description
+        db_board.trello_content = board.description
         db_board.trello_board_lists = [l.name for l in board.open_lists()]
         orgId = board.raw.get('idOrganization')
         if orgId and orgId not in orgs:
             try:
                 org = trello_client.get_organization(orgId).raw
                 orgs[orgId] = {
-                    'name': org.displayName,
+                    'name': org.get('displayName'),
                     'logo': 'https://trello-logos.s3.amazonaws.com/{}/30.png'.format(orgId),
-                    'url': org.url
+                    'url': org.get('url')
                 }
             except ResourceUnavailable:
                 # defunct/deleted organization, assume that board is personal
                 orgId = None
         db_board.trello_board_org = orgs[orgId] if orgId else None
+        db_board.trello_board_members = [
+            {
+                'name': m.full_name,
+                'url': m.url,
+                'avatar': 'https://trello-avatars.s3.amazonaws.com/{}/30.png'.format(m.avatar_hash)
+            }
+            for m in board.all_members()
+        ]
         db_board.last_synced = _get_utc_timestamp()
         db_board.download_status = Document.READY
         db_board.save()
         algolia_engine.sync(db_board, add=created)
-        time.sleep(10)
+        time.sleep(5)
         i = i + 1
-        # subtask(collect_cards).apply_async(
-        #     args=[requester, db_board],
-        #     countdown=180 * i
-        # )
+        subtask(collect_cards).apply_async(
+            args=[requester, db_board],
+            countdown=180 * i
+        )
 
 
 @shared_task

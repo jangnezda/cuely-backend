@@ -207,6 +207,7 @@ CELERY_IMPORTS = (
     'dataimporter.tasks.pipedrive',
     'dataimporter.tasks.jira',
     'dataimporter.tasks.github',
+    'dataimporter.tasks.trello',
     'dataimporter.tasks.admin',
 )
 
@@ -227,7 +228,8 @@ CELERY_QUEUES = (
     Queue('help_scout_docs', routing_key='help_scout_docs'),
     Queue('pipedrive', routing_key='pipedrive'),
     Queue('jira', routing_key='jira'),
-    Queue('github', routing_key='github')
+    Queue('github', routing_key='github'),
+    Queue('trello', routing_key='trello')
 )
 CELERYBEAT_SCHEDULE = {
     'sync-gdrive': {
