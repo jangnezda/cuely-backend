@@ -32,7 +32,7 @@ def start_synchronization(user):
     if should_sync(user, 'github', 'tasks.github'):
         collect_repos.delay(requester=user)
     else:
-        logger.info("Github Pipedrive api key for user '%s' already in use, skipping sync ...", user.username)
+        logger.info("Github oauth token for user '%s' already in use, skipping sync ...", user.username)
 
 
 @shared_task

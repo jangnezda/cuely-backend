@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-auth_fields = ['api_key', 'access_token', 'oauth_toke']
+auth_fields = ['api_key', 'access_token', 'oauth_token']
 
 
 def get_social_data(user, provider, social_keys):
