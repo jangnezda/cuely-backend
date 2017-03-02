@@ -1,15 +1,18 @@
 """
 Trello API integration. Indexing (open) boards, lists and cards.
 """
-from trello import TrelloClient
+from collections import defaultdict
+from operator import itemgetter
+from trello import TrelloClient, Board
 from trello.exceptions import ResourceUnavailable
 import time
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_dt
 from celery import shared_task, subtask
 from django.conf import settings
+import markdown
 
-from dataimporter.task_util import should_sync, should_queue
+from dataimporter.task_util import should_sync, should_queue, cut_utf_string
 from dataimporter.models import Document
 from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
@@ -19,7 +22,7 @@ logger = logging.getLogger(__name__)
 TRELLO_PRIMARY_KEYWORDS = 'trello'
 TRELLO_SECONDARY_KEYWORDS = {
     'board': 'board',
-    'card': 'card'
+    'card': 'card,task,issue'
 }
 
 
@@ -47,10 +50,10 @@ def collect_boards(requester):
     trello_client = init_trello_client(requester)
     orgs = dict()
 
-    i = 0
-    for board in trello_client.list_boards(board_filter='open'):
+    for board in trello_client.list_boards(board_filter='open,closed'):
         db_board, created = Document.objects.get_or_create(
             trello_board_id=board.id,
+            trello_card_id__isnull=True,
             requester=requester,
             user_id=requester.id
         )
@@ -69,17 +72,18 @@ def collect_boards(requester):
         last_activity = parse_dt(board_last_activity).isoformat()
         last_activity_ts = int(parse_dt(board_last_activity).timestamp())
         if not created and db_board.last_updated_ts and db_board.last_updated_ts >= last_activity_ts:
-            logger.debug("Trello board '%s' for user '%s' hasn't changed", board.name, requester.username)
+            logger.debug("Trello board '%s' for user '%s' hasn't changed", board.name[:50], requester.username)
             continue
-        logger.debug("Processing board '%s' for user '%s'", board.name, requester.username)
+        logger.debug("Processing board '%s' for user '%s'", board.name[:50], requester.username)
         db_board.primary_keywords = TRELLO_PRIMARY_KEYWORDS
         db_board.secondary_keywords = TRELLO_SECONDARY_KEYWORDS['board']
         db_board.last_updated = last_activity
         db_board.last_updated_ts = last_activity_ts
-        db_board.trello_title = board.name
+        db_board.trello_title = 'Board: {}'.format(board.name)
         db_board.webview_link = board.url
-        db_board.trello_content = board.description
-        db_board.trello_board_lists = [l.name for l in board.open_lists()]
+        db_board._trello_description = board.description
+        db_board.trello_board_status = 'Closed' if board.closed else 'Open'
+
         orgId = board.raw.get('idOrganization')
         if orgId and orgId not in orgs:
             try:
@@ -93,29 +97,112 @@ def collect_boards(requester):
                 # defunct/deleted organization, assume that board is personal
                 orgId = None
         db_board.trello_board_org = orgs[orgId] if orgId else None
-        db_board.trello_board_members = [
-            {
-                'name': m.full_name,
-                'url': m.url,
-                'avatar': 'https://trello-avatars.s3.amazonaws.com/{}/30.png'.format(m.avatar_hash)
-            }
-            for m in board.all_members()
-        ]
+
+        build_list = lambda l: {
+            'id': l.id,
+            'name': l.name,
+            'closed': l.closed,
+            'pos': l.pos
+        }
+        all_lists = {l.id: build_list(l) for l in board.all_lists()}
+        db_board.trello_content = {
+            'description': _to_html(board.description),
+            'lists': sorted(all_lists.values(), key=itemgetter('closed', 'pos'))
+        }
+
+        build_member = lambda m: {
+            'name': m.full_name,
+            'url': m.url,
+            'avatar': 'https://trello-avatars.s3.amazonaws.com/{}/30.png'.format(m.avatar_hash)
+        }
+        all_members = {m.id: build_member(m) for m in board.all_members()}
+        db_board.trello_board_members = list(all_members.values())
+
         db_board.last_synced = _get_utc_timestamp()
         db_board.download_status = Document.READY
         db_board.save()
         algolia_engine.sync(db_board, add=created)
-        time.sleep(5)
-        i = i + 1
-        subtask(collect_cards).apply_async(
-            args=[requester, db_board],
-            countdown=180 * i
-        )
+        # add sleep of 30s to avoid breaking api limits
+        time.sleep(30)
+        subtask(collect_cards).delay(requester, db_board, all_members, all_lists)
 
 
 @shared_task
-def collect_cards(requester, board):
-    pass
+def collect_cards(requester, db_board, board_members, all_lists):
+    trello_client = init_trello_client(requester)
+    # make an instance of py-trello's Board object to have access to relevant api calls
+    board = Board(client=trello_client, board_id=db_board.trello_board_id)
+    # load all checklists
+    checklists = defaultdict(list)
+    for cl in board.get_checklists():
+        checklists[cl.card_id].append(cl)
+    open_cards = collect_cards_internal(requester, board, board_members, checklists, all_lists, card_status='open')
+    # request closed cards separately to have a better chance to index all open cards
+    # (thus avoiding hitting rate limits already in open cards indexing)
+    collect_cards_internal(requester, board, board_members, checklists, all_lists, card_status='closed')
+
+    # update board lists with a list of cards
+    lists_with_cards = defaultdict(list)
+    for ac in open_cards:
+        lists_with_cards[ac.idList].append({
+            'id': ac.id,
+            'name': ac.name,
+            'pos': ac.pos
+        })
+    board_lists = db_board.trello_content.get('lists', [])
+    for bl in board_lists:
+        bl.update({
+            'cards': sorted(lists_with_cards[bl['id']], key=itemgetter('pos'))
+        })
+    db_board.trello_content = {
+        'description': db_board.trello_content.get('description'),
+        'lists': board_lists
+    }
+    db_board.save()
+    algolia_engine.sync(db_board, add=False)
+
+
+def collect_cards_internal(requester, board, board_members, checklists, lists, card_status):
+    cards = []
+    for card in board.get_cards(filters={'filter': 'all', 'fields': 'all', 'limit': '1000'}, card_filter=card_status):
+        db_card, created = Document.objects.get_or_create(
+            trello_board_id=board.id,
+            trello_card_id=card.id,
+            requester=requester,
+            user_id=requester.id
+        )
+        card_last_activity = card.raw.get('dateLastActivity')
+        last_activity = parse_dt(card_last_activity).isoformat()
+        last_activity_ts = int(parse_dt(card_last_activity).timestamp())
+        if not created and db_card.last_updated_ts and db_card.last_updated_ts >= last_activity_ts:
+            logger.debug("Trello card '%s' for user '%s' hasn't changed", card.name[:50], requester.username)
+            continue
+        logger.debug("Processing card '%s' for user '%s'", card.name[:50], requester.username)
+        db_card.primary_keywords = TRELLO_PRIMARY_KEYWORDS
+        db_card.secondary_keywords = TRELLO_SECONDARY_KEYWORDS['card']
+        db_card.last_updated = last_activity
+        db_card.last_updated_ts = last_activity_ts
+        db_card.trello_title = 'Card: {}'.format(card.name)
+        db_card.webview_link = card.url
+        db_card.trello_content = {
+            'description': _to_html(card.description),
+            'checklists': [
+                {
+                    'id': cl.id,
+                    'name': cl.name,
+                    'items': cl.items
+                }
+                for cl in checklists[card.id]
+            ]
+        }
+        db_card.trello_card_status = 'Archived' if card.closed else 'Open'
+        db_card.trello_card_members = [board_members.get(m) for m in card.idMembers if m in board_members]
+        db_card.last_synced = _get_utc_timestamp()
+        db_card.download_status = Document.READY
+        db_card.save()
+        algolia_engine.sync(db_card, add=created)
+        cards.append(card)
+    return cards
 
 
 def init_trello_client(user):
@@ -133,3 +220,11 @@ def init_trello_client(user):
 def _get_utc_timestamp():
     utc_dt = datetime.now(timezone.utc)
     return utc_dt.astimezone()
+
+
+def _to_html(markdown_text, max_len=8000):
+    if not markdown_text:
+        return None
+    # convert markdown to html (replace any <em> tags with bold tags, because <em> is reserved by Algolia
+    md = markdown.markdown(cut_utf_string(markdown_text, max_len, step=100))
+    return md.replace('<em>', '<b>').replace('</em>', '</b>')
