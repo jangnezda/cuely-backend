@@ -109,6 +109,8 @@ class DocumentIndex(object):
         'trello_card_id',
         'trello_card_status',
         'trello_card_members',
+        'trello_list',
+        'trello_board_name',
         'trello_content'
     ]
 

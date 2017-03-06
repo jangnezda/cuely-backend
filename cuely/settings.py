@@ -151,7 +151,7 @@ SOCIAL_AUTH_GITHUB_SCOPE = ['repo', 'user:email']
 SOCIAL_AUTH_TRELLO_KEY = os.environ['TRELLO_API_KEY']
 SOCIAL_AUTH_TRELLO_SECRET = os.environ['TRELLO_API_SECRET']
 SOCIAL_AUTH_TRELLO_APP_NAME = 'Cuely'
-SOCIAL_AUTH_TRELLO_SCOPE = ['read', 'write', 'account']
+SOCIAL_AUTH_TRELLO_SCOPE = ['read', 'account']
 
 SOCIAL_AUTH_PIPEDRIVE_APIKEYS_FORM_URL = '/home/pipedrive_apikeys/'
 
@@ -166,6 +166,7 @@ SOCIAL_AUTH_PIPELINE = (
     'social.pipeline.social_auth.auth_allowed',
     'social.pipeline.social_auth.social_user',
     'social.pipeline.user.get_username',
+    'social.pipeline.social_auth.associate_by_email',
     'social.pipeline.user.create_user',
     'social.pipeline.social_auth.associate_user',
     'social.pipeline.social_auth.load_extra_data',
@@ -255,6 +256,10 @@ CELERYBEAT_SCHEDULE = {
     'sync-github': {
         'task': 'dataimporter.tasks.github.update_synchronization',
         'schedule': timedelta(seconds=570),
+    },
+    'sync-trello': {
+        'task': 'dataimporter.tasks.trello.update_synchronization',
+        'schedule': timedelta(seconds=300),
     }
 }
 
