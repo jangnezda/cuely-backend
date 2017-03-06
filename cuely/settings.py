@@ -127,6 +127,7 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTHENTICATION_BACKENDS = (
     'social.backends.google.GoogleOAuth2',
     'social.backends.github.GithubOAuth2',
+    'dataimporter.auth.TrelloOAuthFixed',
     'dataimporter.auth.PipedriveApiKeysAuth',
     'dataimporter.auth.HelpscoutApiKeysAuth',
     'dataimporter.auth.HelpscoutDocsApiKeysAuth',
@@ -147,6 +148,11 @@ SOCIAL_AUTH_GITHUB_KEY = os.environ['GITHUB_API_CLIENT_ID']
 SOCIAL_AUTH_GITHUB_SECRET = os.environ['GITHUB_API_CLIENT_SECRET']
 SOCIAL_AUTH_GITHUB_SCOPE = ['repo', 'user:email']
 
+SOCIAL_AUTH_TRELLO_KEY = os.environ['TRELLO_API_KEY']
+SOCIAL_AUTH_TRELLO_SECRET = os.environ['TRELLO_API_SECRET']
+SOCIAL_AUTH_TRELLO_APP_NAME = 'Cuely'
+SOCIAL_AUTH_TRELLO_SCOPE = ['read', 'account']
+
 SOCIAL_AUTH_PIPEDRIVE_APIKEYS_FORM_URL = '/home/pipedrive_apikeys/'
 
 SOCIAL_AUTH_HELPSCOUT_APIKEYS_FORM_URL = '/home/helpscout_apikeys/'
@@ -160,6 +166,7 @@ SOCIAL_AUTH_PIPELINE = (
     'social.pipeline.social_auth.auth_allowed',
     'social.pipeline.social_auth.social_user',
     'social.pipeline.user.get_username',
+    'social.pipeline.social_auth.associate_by_email',
     'social.pipeline.user.create_user',
     'social.pipeline.social_auth.associate_user',
     'social.pipeline.social_auth.load_extra_data',
@@ -201,6 +208,7 @@ CELERY_IMPORTS = (
     'dataimporter.tasks.pipedrive',
     'dataimporter.tasks.jira',
     'dataimporter.tasks.github',
+    'dataimporter.tasks.trello',
     'dataimporter.tasks.admin',
 )
 
@@ -221,7 +229,8 @@ CELERY_QUEUES = (
     Queue('help_scout_docs', routing_key='help_scout_docs'),
     Queue('pipedrive', routing_key='pipedrive'),
     Queue('jira', routing_key='jira'),
-    Queue('github', routing_key='github')
+    Queue('github', routing_key='github'),
+    Queue('trello', routing_key='trello')
 )
 CELERYBEAT_SCHEDULE = {
     'sync-gdrive': {
@@ -247,6 +256,10 @@ CELERYBEAT_SCHEDULE = {
     'sync-github': {
         'task': 'dataimporter.tasks.github.update_synchronization',
         'schedule': timedelta(seconds=570),
+    },
+    'sync-trello': {
+        'task': 'dataimporter.tasks.trello.update_synchronization',
+        'schedule': timedelta(seconds=300),
     }
 }
 

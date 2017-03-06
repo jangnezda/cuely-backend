@@ -12,6 +12,7 @@ from dataimporter.tasks.help_scout import start_synchronization as helpscout_syn
 from dataimporter.tasks.help_scout_docs import start_synchronization as helpscout_docs_sync
 from dataimporter.tasks.jira import start_synchronization as jira_sync
 from dataimporter.tasks.github import start_synchronization as github_sync
+from dataimporter.tasks.trello import start_synchronization as trello_sync
 from dataimporter.tasks.admin import purge_documents
 
 import logging
@@ -23,6 +24,7 @@ sync_mapping = {
     'helpscout-docs-apikeys': helpscout_docs_sync,
     'jira-oauth': jira_sync,
     'github': github_sync,
+    'trello': trello_sync,
 }
 
 
@@ -85,6 +87,7 @@ def sync_status(request):
         helpscout = 'helpscout' in provider and not helpscout_docs
         jira = 'jira' in provider
         github = 'github' in provider
+        trello = 'trello' in provider
         filter_args = {
             'requester': user,
             'document_id__isnull': not gdrive,
@@ -92,7 +95,8 @@ def sync_status(request):
             'helpscout_customer_id__isnull': not helpscout,
             'helpscout_document_id__isnull': not helpscout_docs,
             'jira_issue_key__isnull': not jira,
-            'github_repo_id__isnull': not github
+            'github_repo_id__isnull': not github,
+            'trello_board_id__isnull': not trello
         }
         documents_count = Document.objects.filter(**filter_args).count()
         filter_args['download_status'] = Document.READY
@@ -173,25 +177,28 @@ def update_segment_status(request):
 @require_POST
 def delete_user(request):
     if request.user.is_authenticated:
-        request.user.is_active = False
-        request.user.save()
-
-        request.user.social_auth.all().delete()
-        request.user.socialattributes_set.all().delete()
-        request.user.userattributes.delete()
-
-        du = DeletedUser()
-        du.user_id = request.user.id
-        du.email = request.user.email
-        du.save()
-
-        # wipe the associated documents in a separate task
-        # (can take a long time, but we need to return from this function asap)
-        purge_documents.delay(request.user, remove_user=True)
-
+        _delete_user_internal(request.user)
         return JsonResponse({
             'status': 'Ok',
             'message': 'Removed user with id {}'.format(request.user.id)
         })
     else:
         return HttpResponseForbidden()
+
+
+def _delete_user_internal(user):
+    user.is_active = False
+    user.save()
+
+    user.social_auth.all().delete()
+    user.socialattributes_set.all().delete()
+    user.userattributes.delete()
+
+    du = DeletedUser()
+    du.user_id = user.id
+    du.email = user.email
+    du.save()
+
+    # wipe the associated documents in a separate task
+    # (can take a long time, but we need to return from this function asap)
+    purge_documents.delay(user, remove_user=True)

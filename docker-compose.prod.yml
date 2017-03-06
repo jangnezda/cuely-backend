@@ -31,6 +31,16 @@ services:
     env_file: .env
     command: /usr/src/app/start_worker.sh jira
 
+  worker_github:
+    image: pipetop/cuely-backend
+    env_file: .env
+    command: /usr/src/app/start_worker.sh github
+
+  worker_trello:
+    image: pipetop/cuely-backend
+    env_file: .env
+    command: /usr/src/app/start_worker.sh trello
+
   beat:
     image: pipetop/cuely-backend
     env_file: .env

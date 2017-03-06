@@ -98,7 +98,20 @@ class DocumentIndex(object):
         'github_issue_state',
         'github_issue_labels',
         'github_issue_reporter',
-        'github_issue_assignees'
+        'github_issue_assignees',
+
+        # Trello
+        'trello_title',
+        'trello_board_id',
+        'trello_board_status',
+        'trello_board_org',
+        'trello_board_members',
+        'trello_card_id',
+        'trello_card_status',
+        'trello_card_members',
+        'trello_list',
+        'trello_board_name',
+        'trello_content'
     ]
 
     settings = {

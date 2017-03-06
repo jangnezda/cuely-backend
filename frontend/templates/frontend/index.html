@@ -18,6 +18,16 @@
       </a>
     {% endif %}
 
+    {% if "trello" not in backends %}
+      <a class="btn btn-block btn-social btn-instagram" href="/login/trello?next=/home/auth_complete/trello">
+        <img src="{% static "frontend/trello-mark-white.png" %}" style="padding: 3px">Add Trello integration
+      </a>
+    {% else %}
+      <a class="btn disabled btn-block btn-social btn-instagram" href="#">
+        <img src="{% static "frontend/trello-mark-white.png" %}" style="padding: 3px">Trello integration is ready
+      </a>
+    {% endif %}
+
     {% if "github" not in backends %}
       <a class="btn btn-block btn-social btn-github" href="/login/github?next=/home/auth_complete/github">
         <span class="fa fa-github"></span>Add Github integration
@@ -75,13 +85,17 @@
   <div class="panel-heading">
     <p style="width: 100%; text-align: center; font-weight: 600">Welcome to Cuely search app</p>
 		<p>
-			Please authenticate with your Google or Github account to start using the app.
-      Cuely will begin syncing with your Google Drive (or Github) account after signing in.
+			Please authenticate with one of the social accounts below to start using the app.
+      Cuely will begin syncing data belonging to your chosen account after signing in.
 		</p>
   </div>
   <div class="panel-body" style="text-align: center;padding: 50px;">
 		<a href="/login/google-oauth2/?next=/home/auth_complete/google-oauth2">
 			<img src="{% static "frontend/btn_google_signin_dark_normal_web.png" %}" />
+		</a>
+    <hr>
+		<a href="/login/trello/?next=/home/auth_complete/trello">
+			<img src="{% static "frontend/sign-in-with-trello.png" %}" />
 		</a>
     <hr>
 		<a href="/login/github/?next=/home/auth_complete/github">
