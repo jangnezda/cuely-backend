@@ -14,6 +14,7 @@ from dataimporter.tasks.jira import start_synchronization as jira_sync
 from dataimporter.tasks.github import start_synchronization as github_sync
 from dataimporter.tasks.trello import start_synchronization as trello_sync
 from dataimporter.tasks.admin import purge_documents
+from dataimporter.algolia.engine import algolia_engine
 
 import logging
 logger = logging.getLogger(__name__)
@@ -136,7 +137,7 @@ def get_algolia_key(request):
             'name': request.user.first_name + ' ' + request.user.last_name,
             'email': request.user.email,
             'appId': settings.ALGOLIA['APPLICATION_ID'],
-            'searchKey': request.user.userattributes.algolia_key,
+            'searchKey': algolia_engine.generate_new_search_key(request.user.id),
             'segmentKey': os.environ['SEGMENT_KEY'],
             'segmentIdentified': ua.segment_identify,
             'integrations': integrations
