@@ -9,9 +9,7 @@ sqlparse==0.2.2
 ipython
 django-bootstrap3
 python-dateutil==2.5.3
-
 celery[redis]==3.1.24
-
 requests-oauthlib==0.7.0
 python-social-auth==0.2.21
 algoliasearch==1.11.0
