@@ -290,25 +290,25 @@ LOGGING = {
         },
     },
     'loggers': {
-        'django.db.backends': {
+        # 'django.db.backends': {
+        #    'handlers': ['console'],
+        #    'level': 'DEBUG',
+        #    'propagate': False,
+        # },
+        'dataimporter': {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
         },
-        'dataimporter': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
         'frontend': {
             'handlers': ['console'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
         'cuely': {
             'handlers': ['console'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
     },
 }

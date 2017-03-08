@@ -8,6 +8,5 @@ rm -rf /var/log/celery_beat*.log
 
 cd /usr/src/app
 
-celery -A cuely --detach --logfile=/var/log/celery_beat.log --pidfile=/etc/celery_beat.pid beat --loglevel=info
-sleep 5
-tail -F /var/log/celery_beat.log
+celery -A cuely --pidfile=/etc/celery_beat.pid beat --loglevel=info &
+wait
