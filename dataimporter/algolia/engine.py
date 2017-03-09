@@ -46,14 +46,14 @@ class AlgoliaEngine(object):
         logging.info("Registered Algolia index %s", index_name)
 
     def generate_new_search_key(self, user_id):
-        # generate a new search key that is valid only for 'user_id' and for one hour and five minutes
+        # generate a new search key that is valid only for 'user_id' and for two hours
         search_key = settings.ALGOLIA['API_SEARCH_KEY']
         return self.client.generate_secured_api_key(
             search_key,
             {
                 'filters': 'user_id={}'.format(user_id),
                 'restrictIndices': settings.ALGOLIA['INDEX_NAME'],
-                'validUntil': int(datetime.now(timezone.utc).timestamp()) + 3900
+                'validUntil': int(datetime.now(timezone.utc).timestamp()) + 7200
             }
         )
 

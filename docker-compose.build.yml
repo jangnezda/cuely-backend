@@ -42,64 +42,64 @@ services:
     command: /usr/src/app/start_worker.sh trello
     env_file: .env
 
-  worker_github:
-    image: cuely-backend
-    depends_on:
-      - db
-      - redis
-    command: /usr/src/app/start_worker.sh github
-    env_file: .env
-
-  worker_gdrive:
-    image: cuely-backend
-    depends_on:
-      - db
-      - redis
-    command: /usr/src/app/start_worker.sh gdrive
-    env_file: .env
-
-  worker_help_scout:
-    image: cuely-backend
-    volumes:
-      - .:/usr/src/app/
-    depends_on:
-      - db
-      - redis
-    env_file: .env
-    command: /usr/src/app/start_worker.sh help_scout
-
-  worker_help_scout_docs:
-    image: cuely-backend
-    volumes:
-      - .:/usr/src/app/
-    depends_on:
-      - db
-      - redis
-    env_file: .env
-    command: /usr/src/app/start_worker.sh help_scout_docs
-
-  worker_pipedrive:
-    image: cuely-backend
-    volumes:
-      - .:/usr/src/app/
-    depends_on:
-      - db
-      - redis
-    env_file: .env
-    command: /usr/src/app/start_worker.sh pipedrive
-
-  worker_jira:
-    image: cuely-backend
-    depends_on:
-      - db
-      - redis
-    env_file: .env
-    command: /usr/src/app/start_worker.sh jira
-
-  beat:
-    image: cuely-backend
-    depends_on:
-      - db
-      - redis
-    env_file: .env
-    command: /usr/src/app/start_beat.sh
+#  worker_github:
+#    image: cuely-backend
+#    depends_on:
+#      - db
+#      - redis
+#    command: /usr/src/app/start_worker.sh github
+#    env_file: .env
+#
+#  worker_gdrive:
+#    image: cuely-backend
+#    depends_on:
+#      - db
+#      - redis
+#    command: /usr/src/app/start_worker.sh gdrive
+#    env_file: .env
+#
+#  worker_help_scout:
+#    image: cuely-backend
+#    volumes:
+#      - .:/usr/src/app/
+#    depends_on:
+#      - db
+#      - redis
+#    env_file: .env
+#    command: /usr/src/app/start_worker.sh help_scout
+#
+#  worker_help_scout_docs:
+#    image: cuely-backend
+#    volumes:
+#      - .:/usr/src/app/
+#    depends_on:
+#      - db
+#      - redis
+#    env_file: .env
+#    command: /usr/src/app/start_worker.sh help_scout_docs
+#
+#  worker_pipedrive:
+#    image: cuely-backend
+#    volumes:
+#      - .:/usr/src/app/
+#    depends_on:
+#      - db
+#      - redis
+#    env_file: .env
+#    command: /usr/src/app/start_worker.sh pipedrive
+#
+#  worker_jira:
+#    image: cuely-backend
+#    depends_on:
+#      - db
+#      - redis
+#    env_file: .env
+#    command: /usr/src/app/start_worker.sh jira
+#
+#  beat:
+#    image: cuely-backend
+#    depends_on:
+#      - db
+#      - redis
+#    env_file: .env
+#    command: /usr/src/app/start_beat.sh
