@@ -187,6 +187,7 @@ def collect_cards_internal(requester, board, board_members, checklists, lists, c
             card_last_activity = card.raw.get('dateLastActivity')
             last_activity = parse_dt(card_last_activity).isoformat()
             last_activity_ts = int(parse_dt(card_last_activity).timestamp())
+            collected_cards.append(card)
             if not created and db_card.last_updated_ts and db_card.last_updated_ts >= last_activity_ts:
                 logger.debug("Trello card '%s' for user '%s' hasn't changed", card.name[:50], requester.username)
                 continue
@@ -216,7 +217,6 @@ def collect_cards_internal(requester, board, board_members, checklists, lists, c
             db_card.download_status = Document.READY
             db_card.save()
             algolia_engine.sync(db_card, add=created)
-            collected_cards.append(card)
             last_card_id = card.id
         if len(cards) < 1000:
             break
