@@ -1,9 +1,10 @@
-# Cuely backend
+`NOTE`: Cuely was a startup idea that was part of [Founders](https://founders.as) incubator. Unfortunately, idea failed to gain traction, so it never went
+past prototype/discovery phase. If you want to do anything with the code, use it or extend it, feel free to contact me @jangnezda or open a Github issue.
 
+# Cuely backend
 This repo contains the code and configurations to run the backend part of Cuely service.
 
 ## Overview
-
 Cuely is a service that indexes your cloud app accounts (Goggle Drive, Github, Trello, ...) and makes all the indexed data available in one place.
 Aim is to have the searches as fast as possible, while still having a structured view of the data. Therefore, the client(s) can be made fast,
 informative and showing the data that is up to date.
