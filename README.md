@@ -9,7 +9,7 @@ Aim is to have the searches as fast as possible, while still having a structured
 informative and showing the data that is up to date.
 
 Cuely backend is a Python/Django app that uses MySql to store data and Redis + Celery for worker queues. Aside from using workers to sync cloud app
-accounts, backend is also used for user management, oauth sessions and api for Cuely search app. Experience with Python, Django and Celery is expected
+accounts, backend is also used for user management, oauth sessions and api for Cuely search app. Experience with Docker, Python, Django and Celery is expected
 to work comfortably with the code and environemnt.
 
 The search index is not part of the backend. Instead, [Algolia](https://www.algolia.com) is used by Cuely service. It is pretty trivial to replace Algolia
@@ -35,7 +35,7 @@ docker-compose -f docker-compose.setup.yml stop
 
 Now that the database is ready, run the dev environment:
 ```
-docker-compose -f docker-compose.dev.yml up run
+docker-compose -f docker-compose.dev.yml up
 ```
 
 Use django shell for quick testing and debugging:
@@ -50,5 +50,6 @@ For more complicated deploys, like load-balancing of the backend, I advise the f
 1. Deploy the backend to two instances.
 2. Then deploy nginx in front of them (preferably on separate machines).
 3. Then use a load balancer to route the traffic to both nginx instances.
+4. Deploy the workers to separate instances, one for each integration type. So you have gdrive workers on one, trello workers on another, etc. It's then easier manage/update/scale based on what your users need the most.
 
 This is possible, because backend doesn't hold any state, so a random request may be processed by whatever instance gets it. Any queues/workers information is offloaded to Celery which uses Redis to store the data. 
