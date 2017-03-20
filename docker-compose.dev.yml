@@ -24,15 +24,16 @@ services:
   redis:
     image: redis
 
-  ngrok:
-    image: wernight/ngrok
-    depends_on:
-      - backend
-    ports:
-      - 4040:4040
-    links:
-      - backend
-    command: ngrok http backend:8000 --subdomain cuely-dev --authtoken 3C5H1pHskZErUJV4SNxdp_7RCWDASFjjNWDbDNuZ1DG -log stdout
+  # if you are using ngrok, then uncomment following 'ngrok' service
+  # ngrok:
+  #  image: wernight/ngrok
+  #  depends_on:
+  #    - backend
+  #  ports:
+  #    - 4040:4040
+  #  links:
+  #    - backend
+  #  command: ngrok http backend:8000 --subdomain cuely-dev --authtoken <ngrok_token> -log stdout
 
   worker_trello:
     image: cuely-backend
