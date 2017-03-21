@@ -4,11 +4,10 @@ we simply list all deals and store them to database.
 """
 from pypedriver import Client
 import time
-from datetime import datetime, timezone
 from dateutil.parser import parse as parse_dt
 from celery import shared_task
 
-from dataimporter.task_util import should_sync, should_queue
+from dataimporter.task_util import should_sync, should_queue, get_utc_timestamp
 from dataimporter.models import Document
 from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
@@ -79,7 +78,7 @@ def collect_deals(requester):
         db_deal.last_updated = parse_dt(deal.update_time).isoformat() + 'Z'
         db_deal.last_updated_ts = parse_dt(deal.update_time).timestamp()
         db_deal.pipedrive_content = build_deal_content(deal, users, org_domain, pipe_client)
-        db_deal.last_synced = _get_utc_timestamp()
+        db_deal.last_synced = get_utc_timestamp()
         db_deal.download_status = Document.READY
         db_deal.save()
         algolia_engine.sync(db_deal, add=created)
@@ -156,8 +155,3 @@ def init_pipedrive_client(user):
         return None
     api_key = social.extra_data['api_key']
     return Client(api_key)
-
-
-def _get_utc_timestamp():
-    utc_dt = datetime.now(timezone.utc)
-    return utc_dt.astimezone()

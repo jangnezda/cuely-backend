@@ -1,7 +1,6 @@
 import os
 import httplib2
 import re
-from datetime import datetime, timezone
 from dateutil.parser import parse as parse_date
 
 from apiclient import discovery
@@ -10,7 +9,7 @@ from oauth2client.client import GoogleCredentials
 
 from dataimporter.models import Document, SocialAttributes
 from dataimporter.algolia.engine import algolia_engine
-from dataimporter.task_util import should_sync, should_queue, cut_utf_string
+from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
 import logging
 logger = logging.getLogger(__name__)
 
@@ -343,16 +342,11 @@ def get_gdrive_path(file_id, folders):
     return path
 
 
-def _get_utc_timestamp():
-    utc_dt = datetime.now(timezone.utc)
-    return utc_dt.astimezone()
-
-
 @shared_task
 def download_gdrive_document(doc, access_token, refresh_token):
     if not any(x for x in EXPORTABLE_MIMES if doc.mime_type.startswith(x)):
         doc.download_status = Document.READY
-        doc.last_synced = _get_utc_timestamp()
+        doc.last_synced = get_utc_timestamp()
         doc.save()
         algolia_engine.sync(doc, add=False)
         return
@@ -374,7 +368,7 @@ def download_gdrive_document(doc, access_token, refresh_token):
 
         content = cut_utf_string(response.decode('UTF-8', errors='replace'), 9000, step=10)
         doc.content = content
-        doc.last_synced = _get_utc_timestamp()
+        doc.last_synced = get_utc_timestamp()
         algolia_engine.sync(doc, add=False)
     finally:
         doc.download_status = Document.READY

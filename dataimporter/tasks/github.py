@@ -11,7 +11,7 @@ from celery import shared_task, subtask
 import markdown
 from mdx_gfm import GithubFlavoredMarkdownExtension
 
-from dataimporter.task_util import should_sync, should_queue, cut_utf_string
+from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
 from dataimporter.models import Document
 from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
@@ -132,7 +132,7 @@ def collect_repos(requester):
             countdown=180 * i if created else 1
         )
 
-        db_repo.last_synced = _get_utc_timestamp()
+        db_repo.last_synced = get_utc_timestamp()
         db_repo.download_status = Document.READY
         db_repo.save()
 
@@ -223,7 +223,7 @@ def collect_issues(requester, repo_id, repo_name, created):
             })
 
         algolia_engine.sync(db_issue, add=created)
-        db_issue.last_synced = _get_utc_timestamp()
+        db_issue.last_synced = get_utc_timestamp()
         db_issue.download_status = Document.READY
         db_issue.save()
         # add sleep every 50 issues to avoid breaking API rate limits
@@ -271,7 +271,7 @@ def collect_files(requester, repo_id, repo_name, repo_url, default_branch, enric
             db_file.github_repo_full_name = repo_name
             db_file.webview_link = '{}/blob/{}/{}'.format(repo_url, default_branch, f.path)
             algolia_engine.sync(db_file, add=created)
-        db_file.last_synced = _get_utc_timestamp()
+        db_file.last_synced = get_utc_timestamp()
         db_file.download_status = Document.PENDING
         db_file.save()
     # run enrich_files() for all new_files in chunks of 50 items
@@ -345,7 +345,7 @@ def enrich_files(requester, files, repo_id, repo_name, repo_url, default_branch)
         db_file.github_file_committers = committers
         algolia_engine.sync(db_file, add=created)
 
-        db_file.last_synced = _get_utc_timestamp()
+        db_file.last_synced = get_utc_timestamp()
         db_file.download_status = Document.READY
         db_file.save()
         # add sleep to avoid breaking API rate limits
@@ -422,7 +422,7 @@ def collect_commits(requester, repo_id, repo_name, repo_url, default_branch, com
         db_commit.github_commit_files = files
         algolia_engine.sync(db_commit, add=created)
 
-        db_commit.last_synced = _get_utc_timestamp()
+        db_commit.last_synced = get_utc_timestamp()
         db_commit.download_status = Document.READY
         db_commit.save()
         # add sleep of half a second to avoid breaking API rate limits
@@ -449,8 +449,3 @@ def _compute_sha(value):
     sha = hashlib.sha1()
     sha.update(bytes(value, 'utf-8'))
     return sha.hexdigest()
-
-
-def _get_utc_timestamp():
-    utc_dt = datetime.now(timezone.utc)
-    return utc_dt.astimezone()

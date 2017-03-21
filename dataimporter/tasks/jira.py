@@ -3,12 +3,11 @@ Jira API integration.
 """
 from jira.client import JIRA
 import time
-from datetime import datetime, timezone
 from dateutil.parser import parse as parse_dt
 from celery import shared_task
 
 from django.conf import settings
-from dataimporter.task_util import should_sync, should_queue, cut_utf_string
+from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
 from dataimporter.models import Document
 from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
@@ -70,7 +69,7 @@ def collect_issues(requester, sync_update=False):
                     user_id=requester.id
                 )
                 logger.debug("Processing Jira issue %s for user %s", issue.key, requester.username)
-                updated = issue.fields.updated or issue.fields.created or _get_utc_timestamp()
+                updated = issue.fields.updated or issue.fields.created or get_utc_timestamp()
                 updated_ts = parse_dt(updated).timestamp()
                 if not created and db_issue.last_updated_ts:
                     # compare timestamps and skip the deal if it hasn't been updated
@@ -103,7 +102,7 @@ def collect_issues(requester, sync_update=False):
                 db_issue.jira_project_name = project_name
                 db_issue.jira_project_key = project_key
                 db_issue.jira_project_link = project_url
-                db_issue.last_synced = _get_utc_timestamp()
+                db_issue.last_synced = get_utc_timestamp()
                 db_issue.download_status = Document.READY
                 db_issue.save()
                 algolia_engine.sync(db_issue, add=created)
@@ -135,8 +134,3 @@ def _get_cert():
     with open(path) as f:
         cert = f.read()
     return cert
-
-
-def _get_utc_timestamp():
-    utc_dt = datetime.now(timezone.utc)
-    return utc_dt.astimezone()

@@ -2,6 +2,7 @@ from functools import wraps
 from celery.task.control import inspect
 from dataimporter.models import User
 from cuely.queue_util import queues_full
+from datetime import datetime, timezone
 import logging
 logger = logging.getLogger(__name__)
 
@@ -78,3 +79,8 @@ def cut_utf_string(s, bytes_len_max, step=1):
         s = s[:-step]
         l = len(s.encode('UTF-8'))
     return s
+
+
+def get_utc_timestamp():
+    utc_dt = datetime.now(timezone.utc)
+    return utc_dt.astimezone()

@@ -3,12 +3,12 @@ Helpscout Docs API integration.
 The 'while True' loops are there because of how helpscout api library works when dealing with paged results.
 """
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from dateutil.parser import parse as parse_dt
 from celery import shared_task, subtask
 
 import helpscout
-from dataimporter.task_util import should_sync, should_queue, cut_utf_string
+from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
 from dataimporter.models import Document
 from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
@@ -88,7 +88,7 @@ def collect_articles(requester):
                 logger.debug("Processing Helpscout article '%s' for user '%s'", article.name, requester.username)
                 db_doc.helpscout_document_title = 'Doc: {}'.format(article.name)
                 new_updated = article.updatedat or article.createdat
-                new_updated_ts = parse_dt(new_updated).timestamp() if new_updated else _get_utc_timestamp()
+                new_updated_ts = parse_dt(new_updated).timestamp() if new_updated else get_utc_timestamp()
                 if not created and db_doc.last_updated_ts:
                     new_updated_ts = db_doc.last_updated_ts \
                         if db_doc.last_updated_ts > new_updated_ts else new_updated_ts
@@ -129,7 +129,7 @@ def process_article(requester, db_doc, cats):
     db_doc.helpscout_document_content = cut_utf_string(article_details.text, 9000, 300)
 
     db_doc.download_status = Document.READY
-    db_doc.last_synced = _get_utc_timestamp()
+    db_doc.last_synced = get_utc_timestamp()
     db_doc.save()
     algolia_engine.sync(db_doc, add=False)
 
@@ -149,8 +149,3 @@ def _init_client(user, provider, is_docs=False):
         client.api_key = social.extra_data['api_key']
         return client
     return None
-
-
-def _get_utc_timestamp():
-    utc_dt = datetime.now(timezone.utc)
-    return utc_dt.astimezone()

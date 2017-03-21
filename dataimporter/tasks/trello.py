@@ -6,13 +6,12 @@ from operator import itemgetter
 from trello import TrelloClient, Board
 from trello.exceptions import ResourceUnavailable
 import time
-from datetime import datetime, timezone
 from dateutil.parser import parse as parse_dt
 from celery import shared_task, subtask
 from django.conf import settings
 import markdown
 
-from dataimporter.task_util import should_sync, should_queue, cut_utf_string
+from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
 from dataimporter.models import Document
 from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
@@ -122,7 +121,7 @@ def collect_boards(requester):
         all_members = {m.id: build_member(m) for m in board.all_members()}
         db_board.trello_board_members = list(all_members.values())
 
-        db_board.last_synced = _get_utc_timestamp()
+        db_board.last_synced = get_utc_timestamp()
         db_board.download_status = Document.READY
         db_board.save()
         algolia_engine.sync(db_board, add=created)
@@ -213,7 +212,7 @@ def collect_cards_internal(requester, board, board_members, checklists, lists, c
             db_card.trello_card_members = [board_members.get(m) for m in card.idMembers if m in board_members]
             db_card.trello_board_name = board.name
             db_card.trello_list = lists.get(card.idList)
-            db_card.last_synced = _get_utc_timestamp()
+            db_card.last_synced = get_utc_timestamp()
             db_card.download_status = Document.READY
             db_card.save()
             algolia_engine.sync(db_card, add=created)
@@ -233,11 +232,6 @@ def init_trello_client(user):
         token=social.extra_data['access_token']['oauth_token'],
         token_secret=social.extra_data['access_token']['oauth_token_secret']
     )
-
-
-def _get_utc_timestamp():
-    utc_dt = datetime.now(timezone.utc)
-    return utc_dt.astimezone()
 
 
 def _to_html(markdown_text, max_len=8000):

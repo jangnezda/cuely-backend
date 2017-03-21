@@ -4,12 +4,12 @@ The 'while True' loops are there because of how helpscout api library works when
 """
 import json
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_dt
 from celery import shared_task, subtask
 
 import helpscout
-from dataimporter.task_util import should_sync, should_queue, cut_utf_string
+from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
 from dataimporter.models import Document
 from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
@@ -75,7 +75,7 @@ def collect_customers(requester, update):
     if update:
         customer_ids = set()
         # check for new stuff since last 6 hours only
-        since = _get_utc_timestamp() - timedelta(hours=6)
+        since = get_utc_timestamp() - timedelta(hours=6)
         # this abomination is needed, because Helpscout API chokes on iso dates with milliseconds and/or timezones
         since_iso = since.isoformat().split('.')[0] + 'Z'
         for box in mailboxes:
@@ -204,7 +204,7 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
     content = process_conversations(users, conversations, helpscout_client)
     db_customer.helpscout_content = content
     db_customer.download_status = Document.READY
-    db_customer.last_synced = _get_utc_timestamp()
+    db_customer.last_synced = get_utc_timestamp()
     db_customer.save()
     algolia_engine.sync(db_customer, add=False)
 
@@ -288,8 +288,3 @@ def init_helpscout_client(user):
     client = helpscout.Client()
     client.api_key = social.extra_data['api_key']
     return client
-
-
-def _get_utc_timestamp():
-    utc_dt = datetime.now(timezone.utc)
-    return utc_dt.astimezone()
