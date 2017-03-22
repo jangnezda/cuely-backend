@@ -45,7 +45,8 @@ FILE_FIELDSET = ','.join([
     'lastModifyingUser(displayName,photoLink)',
     'owners(displayName,photoLink)',
     'parents',
-    'description'
+    'description',
+    'capabilities'
 ])
 GDRIVE_KEYWORDS = {
     'primary': 'gdrive,google drive',
@@ -242,14 +243,19 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             doc.primary_keywords = GDRIVE_KEYWORDS['primary']
             doc.secondary_keywords = GDRIVE_KEYWORDS['secondary'][doc.mime_type] \
                 if doc.mime_type in GDRIVE_KEYWORDS['secondary'] else None
+            can_download = item.get('capabilities', {}).get('canDownload', True)
             if not created:
-                if doc.download_status is Document.READY and \
+                if doc.download_status is Document.READY and can_download and \
                         (doc.last_synced is None or last_modified_on_server > doc.last_synced):
                     doc.download_status = Document.PENDING
                     subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
             else:
                 algolia_engine.sync(doc, add=created)
-                subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
+                if can_download:
+                    subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
+                else:
+                    doc.last_synced = get_utc_timestamp()
+                    doc.download_status = Document.READY
 
             doc.save()
 
