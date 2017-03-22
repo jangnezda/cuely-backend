@@ -102,6 +102,7 @@ DATABASES = {
         'HOST': os.environ['MYSQL_ENDPOINT'],
         'USER': os.environ['MYSQL_USER'],
         'PASSWORD': os.environ['MYSQL_PASSWORD'],
+        'CONN_MAX_AGE': 300,
     }
 }
 
