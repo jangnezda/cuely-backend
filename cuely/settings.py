@@ -23,7 +23,7 @@ AUTH_FILES_DIR = os.path.join(BASE_DIR, 'dataimporter/auth_files')
 # See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '1l*vyv07(uf!sn%-b%p%0r!kegfvi2&opra-xc6759k*x)*i02'
+SECRET_KEY = os.environ['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ['CUELY_DEBUG'] == 'True'
