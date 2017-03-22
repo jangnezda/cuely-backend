@@ -1,6 +1,3 @@
-`NOTE`: Cuely was a startup idea that was part of [Founders](https://founders.as) incubator. Unfortunately, idea failed to gain traction, so it never went
-past prototype/discovery phase. If you want to do anything with the code, use it or extend it, and need any help, then feel free to contact me [@jangnezda](https://twitter.com/@jangnezda) or open a Github issue.
-
 # Cuely backend
 This repo contains the code and configurations to run the backend part of Cuely service.
 
