@@ -1,7 +1,7 @@
 from functools import wraps
 from celery.task.control import inspect
 from dataimporter.models import User
-from cuely.queue_util import queues_full
+from cuely.queue_util import queue_full
 from datetime import datetime, timezone
 import logging
 logger = logging.getLogger(__name__)
@@ -59,8 +59,8 @@ def should_queue(fn):
         queue = fn.__module__.split('.')[-1]
         logger.debug("module/queue %s", queue)
         # check if 'default' queue is full, as well
-        if queues_full([queue, 'default']):
-            logger.debug("%s queue is full or default queue is full, skipping this beat", queue)
+        if queue_full(queue) or queue_full('default', treshold=5):
+            logger.debug("%s queue is full or 'default' queue is in use, skipping this beat", queue)
             return
         return fn(*args, **kwargs)
     return check_queue
