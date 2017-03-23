@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 from django.contrib.auth.models import User
 from django.db import models
 from django_mysql.models import JSONField
+from django.core.exceptions import MultipleObjectsReturned
 
 
 class Document(models.Model):
@@ -84,3 +85,14 @@ class AlgoliaIndex(models.Model):
     name = models.CharField(max_length=100, blank=False, null=False, unique=True)
     settings = JSONField(default=dict)
     model_type = models.IntegerField(choices=MODEL_TYPE, default=DOCUMENT)
+
+
+def get_or_create(model, **filter_args):
+    """ The same as built-in 'get_or_create', but it will automatically delete duplicates. """
+    try:
+        return model.objects.get_or_create(filter_args)
+    except MultipleObjectsReturned:
+        all_objects = model.objects.filter(**filter_args)
+        for obj in all_objects[1:]:
+            obj.delete()
+        return (all_objects[0], False)

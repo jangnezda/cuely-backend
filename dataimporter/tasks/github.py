@@ -12,7 +12,7 @@ import markdown
 from mdx_gfm import GithubFlavoredMarkdownExtension
 
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
-from dataimporter.models import Document
+from dataimporter.models import Document, get_or_create
 from dataimporter.algolia.engine import algolia_engine
 from social.apps.django_app.default.models import UserSocialAuth
 import logging
@@ -377,7 +377,8 @@ def collect_commits(requester, repo_id, repo_name, repo_url, default_branch, com
         if i >= max_commits:
             break
         i = i + 1
-        db_commit, created = Document.objects.get_or_create(
+        db_commit, created = get_or_create(
+            model=Document,
             github_commit_id=cmt.sha,
             github_repo_id=repo_id,
             requester=requester,
