@@ -59,7 +59,7 @@ def should_queue(fn):
         queue = fn.__module__.split('.')[-1]
         logger.debug("module/queue %s", queue)
         # check if 'default' queue is full, as well
-        if queue_full(queue) or queue_full('default', treshold=5):
+        if queue_full(queue) or queue_full('default', threshold=5):
             logger.debug("%s queue is full or 'default' queue is in use, skipping this beat", queue)
             return
         return fn(*args, **kwargs)
