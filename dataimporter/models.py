@@ -90,7 +90,7 @@ class AlgoliaIndex(models.Model):
 def get_or_create(model, **filter_args):
     """ The same as built-in 'get_or_create', but it will automatically delete duplicates. """
     try:
-        return model.objects.get_or_create(filter_args)
+        return model.objects.get_or_create(**filter_args)
     except MultipleObjectsReturned:
         all_objects = model.objects.filter(**filter_args)
         for obj in all_objects[1:]:

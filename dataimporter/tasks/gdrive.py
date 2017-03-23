@@ -193,7 +193,8 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
         new_start_page_token = files.get('newStartPageToken', new_start_page_token)
         items = files.get(json_key, [])
         if not folders and len(items) > 0:
-            # retreive all folders to be able to get file path more easily in the file listing(s)
+            # retrieve all folders to be able to get file path more easily in the file listing(s)
+            logger.debug("Getting folders for %s/%s", requester.id, requester.username)
             folders = get_gdrive_folders(service)
             # check if any folder was marked as hidden and we already have it synced ...
             # if we do, then remove it (plus all children) from our indexing
@@ -296,7 +297,7 @@ def get_gdrive_folders(service):
     while True:
         params = {
             'q': "mimeType = 'application/vnd.google-apps.folder'",
-            'pageSize': 100,
+            'pageSize': 300,
             'fields': 'files(id,name,parents,description),nextPageToken'
         }
         if page_token:
