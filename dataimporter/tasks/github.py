@@ -60,6 +60,11 @@ def collect_repos(requester):
             logger.debug("Skipping github repo '%s' for user '%s'", repo.full_name, requester.username)
             # seems like broken data, skip it
             continue
+        if repo.fork:
+            # don't process forked repos
+            logger.debug("Skipping forked github repo '%s' for user '%s'", repo.full_name, requester.username)
+            continue
+
         db_repo, created = Document.objects.get_or_create(
             github_repo_id=repo.id,
             github_commit_id__isnull=True,

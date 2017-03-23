@@ -7,7 +7,7 @@ from apiclient import discovery
 from celery import shared_task, subtask
 from oauth2client.client import GoogleCredentials
 
-from dataimporter.models import Document, SocialAttributes
+from dataimporter.models import Document, SocialAttributes, get_or_create
 from dataimporter.algolia.engine import algolia_engine
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
 import logging
@@ -222,7 +222,8 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             parent = parents[0] if parents else None
             path = get_gdrive_path(parent, folders)
 
-            doc, created = Document.objects.get_or_create(
+            doc, created = get_or_create(
+                model=Document,
                 document_id=item['id'],
                 requester=requester,
                 user_id=requester.id
