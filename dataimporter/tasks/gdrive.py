@@ -246,18 +246,24 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             doc.secondary_keywords = GDRIVE_KEYWORDS['secondary'][doc.mime_type] \
                 if doc.mime_type in GDRIVE_KEYWORDS['secondary'] else None
             can_download = item.get('capabilities', {}).get('canDownload', True)
-            if not created:
-                if doc.download_status is Document.READY and can_download and \
-                        (doc.last_synced is None or last_modified_on_server > doc.last_synced):
-                    doc.download_status = Document.PENDING
+            if can_download:
+                # check also the mime type as we only support some of them
+                if not any(x for x in EXPORTABLE_MIMES if doc.mime_type.startswith(x)):
+                    can_download = False
+            if can_download:
+                if not created:
+                    if doc.download_status is Document.READY and can_download and \
+                            (doc.last_synced is None or last_modified_on_server > doc.last_synced):
+                        doc.download_status = Document.PENDING
+                        subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
+                else:
+                    algolia_engine.sync(doc, add=created)
                     subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
             else:
-                algolia_engine.sync(doc, add=created)
-                if can_download:
-                    subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
-                else:
-                    doc.last_synced = get_utc_timestamp()
-                    doc.download_status = Document.READY
+                doc.download_status = Document.READY
+                doc.last_synced = get_utc_timestamp()
+                doc.save()
+                algolia_engine.sync(doc, add=False)
 
             doc.save()
 
@@ -352,13 +358,6 @@ def get_gdrive_path(file_id, folders):
 
 @shared_task
 def download_gdrive_document(doc, access_token, refresh_token):
-    if not any(x for x in EXPORTABLE_MIMES if doc.mime_type.startswith(x)):
-        doc.download_status = Document.READY
-        doc.last_synced = get_utc_timestamp()
-        doc.save()
-        algolia_engine.sync(doc, add=False)
-        return
-
     doc.download_status = Document.PROCESSING
     doc.save()
 
