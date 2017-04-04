@@ -7,10 +7,10 @@ import time
 from dateutil.parser import parse as parse_dt
 from celery import shared_task
 
+from social_django.models import UserSocialAuth
 from dataimporter.task_util import should_sync, should_queue, get_utc_timestamp
-from dataimporter.models import Document
+from dataimporter.models import SyncedObject
 from dataimporter.algolia.engine import algolia_engine
-from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
 
@@ -54,10 +54,9 @@ def collect_deals(requester):
             # cannot associate a deal to a company
             logger.debug("Deal '%s' for user '%s' cannot be associated to a company", deal.title, requester.username)
             continue
-        db_deal, created = Document.objects.get_or_create(
+        db_deal, created = SyncedObject.objects.get_or_create(
             pipedrive_deal_id=deal.id,
-            requester=requester,
-            user_id=requester.id
+            user=requester
         )
         if not created and db_deal.last_updated_ts:
             # compare timestamps and skip the deal if it hasn't been updated
@@ -79,7 +78,7 @@ def collect_deals(requester):
         db_deal.last_updated_ts = parse_dt(deal.update_time).timestamp()
         db_deal.pipedrive_content = build_deal_content(deal, users, org_domain, pipe_client)
         db_deal.last_synced = get_utc_timestamp()
-        db_deal.download_status = Document.READY
+        db_deal.download_status = SyncedObject.READY
         db_deal.save()
         algolia_engine.sync(db_deal, add=created)
         # add sleep of one second to avoid breaking API rate limits

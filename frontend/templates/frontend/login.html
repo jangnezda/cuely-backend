@@ -1,0 +1,42 @@
+
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block header %}
+  <div class="topbar">
+    <div class="title">Login to Cuely</div>
+    <div class="paragraph">
+      Login to Cuely using the Google sign in button below. Remember to use the same Google account as was used when you signed up for Cuely.
+  </div>
+  {% if error %}
+  <div class="error">
+    {{ error }}
+  </div>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if request.user.is_authenticated %}
+PINKO
+{% else %}
+<div> 
+  <br/><br/>
+  <a href="/login/google-oauth2/?next=/home/auth_complete/google-oauth2&signin=true">
+    <img src="{% static "frontend/btn_google_signin_dark_normal_web.png" %}" />
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block footer %}
+<div class="bottombar columns">
+  <div>
+    <a href="/home/" class="btn btn-link login_link">Not a user? Signup here.</a>
+  </div>
+  <div class="right">
+    <a href="https://cuely.co" target="_blank" class="btn btn-link login_link">What is Cuely?</a>
+  </div>
+</div>
+{% endblock %}

@@ -36,7 +36,7 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'dataimporter.apps.DataimporterConfig',
     'frontend.apps.FrontendConfig',
-    'social.apps.django_app.default',
+    'social_django',
     'bootstrap3',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -69,8 +69,8 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'social.apps.django_app.context_processors.backends',
-                'social.apps.django_app.context_processors.login_redirect',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
@@ -126,8 +126,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTHENTICATION_BACKENDS = (
-    'social.backends.google.GoogleOAuth2',
-    'social.backends.github.GithubOAuth2',
+    'social_core.backends.google.GoogleOAuth2',
+    'social_core.backends.github.GithubOAuth2',
     'dataimporter.auth.TrelloOAuthFixed',
     'dataimporter.auth.PipedriveApiKeysAuth',
     'dataimporter.auth.HelpscoutApiKeysAuth',
@@ -136,6 +136,7 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
+SOCIAL_AUTH_FIELDS_STORED_IN_SESSION = ['signup', 'signin', 'team_name', 'invite_code']
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ['GDRIVE_API_CLIENT_ID']
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ['GDRIVE_API_CLIENT_SECRET']
@@ -162,16 +163,17 @@ SOCIAL_AUTH_HELPSCOUT_DOCS_APIKEYS_FORM_URL = '/home/helpscout_docs_apikeys/'
 SOCIAL_AUTH_JIRA_OAUTH_FORM_URL = '/home/jira_oauth/'
 
 SOCIAL_AUTH_PIPELINE = (
-    'social.pipeline.social_auth.social_details',
-    'social.pipeline.social_auth.social_uid',
-    'social.pipeline.social_auth.auth_allowed',
-    'social.pipeline.social_auth.social_user',
-    'social.pipeline.user.get_username',
-    'social.pipeline.social_auth.associate_by_email',
-    'social.pipeline.user.create_user',
-    'social.pipeline.social_auth.associate_user',
-    'social.pipeline.social_auth.load_extra_data',
-    'social.pipeline.user.user_details',
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'social_core.pipeline.social_auth.social_user',
+    'social_core.pipeline.user.get_username',
+    'dataimporter.auth.validate_auth_flow',
+    'social_core.pipeline.user.create_user',
+    'social_core.pipeline.social_auth.associate_user',
+    'social_core.pipeline.social_auth.load_extra_data',
+    'social_core.pipeline.user.user_details',
+    'dataimporter.auth.handle_team_integration',
 )
 
 # Internationalization

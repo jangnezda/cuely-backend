@@ -1,11 +1,14 @@
 from oauthlib.oauth1 import SIGNATURE_RSA
 from requests_oauthlib import OAuth1Session
 
-from social.backends.legacy import LegacyAuth
-from social.backends.trello import TrelloOAuth
-from social.exceptions import AuthMissingParameter, AuthException
+from social_core.backends.legacy import LegacyAuth
+from social_core.backends.trello import TrelloOAuth
+from social_core.exceptions import AuthMissingParameter, AuthException
 from django.conf import settings
-from dataimporter.models import UserAttributes
+from dataimporter.models import UserAttributes, Team, Invite, FailedAuth, AlgoliaIndex
+from dataimporter.algolia.index import default_index
+from dataimporter.plan import FREE
+from frontend.views import index
 import logging
 logger = logging.getLogger(__name__)
 
@@ -143,3 +146,102 @@ class JiraOAuth(LegacyAuth):
 
 class TrelloOAuthFixed(TrelloOAuth):
     SCOPE_SEPARATOR = ','
+
+
+def validate_auth_flow(strategy, details, *args, **kwargs):
+    """
+    Use this function in social auth pipeline to validate team name, invite code, etc.
+    Should be used *before* a user is created in the database.
+    """
+    signup, signin, team_name, invite_code = _get_session_params(strategy)
+
+    error = None
+    if signup:
+        if team_name:
+            if Team.objects.filter(name=team_name).exists():
+                error = 'Company with name {} already exists. Please choose a different name.'.format(team_name)
+        else:
+            if invite_code:
+                invite = Invite.objects.filter(code=invite_code, consumed=False, expired=False).first()
+                if invite:
+                    if invite.email != details.get('email').strip():
+                        error = 'Invite code is not valid for {}.'.format(details.get('email'))
+                else:
+                    error = 'Invalid or expired invite code.'
+            else:
+                error = 'Missing invite code. Please use the code from invite email and try again.'
+
+        if error:
+            return _failed_auth(error, strategy, details.get('email'), team_name, invite_code)
+    return {'auth_validated': True}
+
+
+def _failed_auth(error, strategy, email, team_name, invite_code):
+    failed_auth = FailedAuth()
+    failed_auth.team_name = team_name
+    failed_auth.invite_code = invite_code
+    failed_auth.error = error
+    failed_auth.email = email
+    failed_auth.save()
+    _pop_session_params(strategy)
+    return index(strategy.request, error=error)
+
+
+def handle_team_integration(strategy, user, is_new, *args, **kwargs):
+    """
+    Use this function in social auth pipeline to create a new team or invited user.
+    """
+    signup, signin, team_name, invite_code = _pop_session_params(strategy)
+    if signup:
+        if not is_new:
+            error = "A user with email {} already exists. Please login using the link at the bottom.".format(user.email)
+            return _failed_auth(error, strategy, user.email, team_name, invite_code)
+
+        team = None
+        team_admin = False
+        if team_name:
+            team_admin = True
+
+            # every team is created with default index (and later switched to dedicated for paid plans)
+            index_name, _, _ = default_index()
+            ai = AlgoliaIndex.objects.get(name=index_name)
+            team = Team()
+            team.name = team_name
+            team.index = ai
+            team.plan = FREE['name']
+            team.quota_users = FREE['users']
+            team.quota_objects = FREE['objects']
+            team.save()
+        else:
+            invite = Invite.objects.get(code=invite_code, consumed=False, expired=False)
+            team = invite.team
+            invite.consumed = True
+            invite.user_id = user.id
+            invite.save()
+
+        user_attr = UserAttributes()
+        user_attr.user = user
+        user_attr.team = team
+        user_attr.team_admin = team_admin
+        user_attr.save()
+
+
+def _get_session_params(strategy):
+    return _session_params(strategy, pop=False)
+
+
+def _session_params(strategy, pop=False):
+    return [
+        strategy.session_pop(x) if pop else strategy.session_get(x)
+        for x in ['signup', 'signin', 'team_name', 'invite_code']
+    ]
+
+
+def _pop_session_params(strategy):
+    return _session_params(strategy, pop=True)
+
+
+def _param_true(param):
+    if not param:
+        return False
+    return param.lower() in ['1', 't', 'true', 'y', 'yes']

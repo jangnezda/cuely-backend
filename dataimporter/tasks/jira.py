@@ -6,11 +6,11 @@ import time
 from dateutil.parser import parse as parse_dt
 from celery import shared_task
 
+from social_django.models import UserSocialAuth
 from django.conf import settings
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
-from dataimporter.models import Document
+from dataimporter.models import SyncedObject
 from dataimporter.algolia.engine import algolia_engine
-from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
 
@@ -63,10 +63,9 @@ def collect_issues(requester, sync_update=False):
             old_i = i
             for issue in jira.search_issues(jql, startAt=i, maxResults=25, validate_query=False):
                 i = i + 1
-                db_issue, created = Document.objects.get_or_create(
+                db_issue, created = SyncedObject.objects.get_or_create(
                     jira_issue_key=issue.key,
-                    requester=requester,
-                    user_id=requester.id
+                    user=requester
                 )
                 logger.debug("Processing Jira issue %s for user %s", issue.key, requester.username)
                 updated = issue.fields.updated or issue.fields.created or get_utc_timestamp()
@@ -103,7 +102,7 @@ def collect_issues(requester, sync_update=False):
                 db_issue.jira_project_key = project_key
                 db_issue.jira_project_link = project_url
                 db_issue.last_synced = get_utc_timestamp()
-                db_issue.download_status = Document.READY
+                db_issue.download_status = SyncedObject.READY
                 db_issue.save()
                 algolia_engine.sync(db_issue, add=created)
             time.sleep(2)

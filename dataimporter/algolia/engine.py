@@ -1,7 +1,6 @@
 from django.conf import settings
 from algoliasearch import algoliasearch
 from django.db.models.signals import pre_delete
-from dataimporter.algolia.index import INDEX_MODEL_MAP
 from datetime import datetime, timezone
 
 import logging
@@ -24,13 +23,15 @@ class AlgoliaEngine(object):
         self.client.set_extra_header('User-Agent', 'Cuely Backend')
         self.existing_algolia_indexes = [x.get('name') for x in self.client.list_indexes().get('items', [])]
 
-    def register_db_model(self, index_model):
+    def setup(self, index_model, sync_model, algolia_fields):
         self._index_model = index_model
+        self._sync_model = sync_model
+        self._fields = algolia_fields
         # check for any existing indices in the DB
         for idx in index_model.objects.all():
-            self.register(idx.name, idx.settings, idx.model_type)
+            self.register(idx.name, idx.settings)
 
-    def register(self, index_name, index_settings, model_type):
+    def register(self, index_name, index_settings):
         """ Registers the Algolia index. If the index doesn't exist yet, it will create a new one. """
         db_idx, created = self._index_model.objects.get_or_create(
             name=index_name,
@@ -39,10 +40,11 @@ class AlgoliaEngine(object):
         algolia_idx = self.client.init_index(index_name)
         if created and index_name not in self.existing_algolia_indexes:
             algolia_idx.set_settings(index_settings)
+            logger.info("Created new Algolia index %s", index_name)
 
-        self._indices[index_name] = (db_idx, algolia_idx, INDEX_MODEL_MAP[model_type][1])
+        self._indices[index_name] = (db_idx, algolia_idx)
         # Connect to the signalling for deletion
-        pre_delete.connect(self._pre_delete_receiver, INDEX_MODEL_MAP[model_type][0])
+        pre_delete.connect(self._pre_delete_receiver, self._sync_model)
         logging.info("Registered Algolia index %s", index_name)
 
     def generate_new_search_key(self, user_id):
@@ -67,15 +69,15 @@ class AlgoliaEngine(object):
         if index_name not in self._indices:
             raise AlgoliaEngineError('{} is unknown index. Register it first!'.format(index_name))
 
-        db_idx, algolia_idx, fields = self._indices.get(index_name, (None, None, None))
+        db_idx, algolia_idx = self._indices.get(index_name, (None, None))
         algolia_idx.set_settings(new_settings)
         db_idx.settings = new_settings
         db_idx.save()
 
     def get_index(self, instance):
         # TODO: lookup index based on team_id (when teams are implemented)
-        db_idx, algolia_idx, fields = self._indices.get(settings.ALGOLIA['INDEX_NAME'])
-        return (algolia_idx, fields)
+        db_idx, algolia_idx = self._indices.get(instance.index_name)
+        return (algolia_idx, self._fields)
 
     def _build_object(self, instance, fields, with_id=False):
         """ Build the JSON object. """

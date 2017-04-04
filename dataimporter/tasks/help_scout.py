@@ -8,11 +8,11 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_dt
 from celery import shared_task, subtask
 
+from social_django.models import UserSocialAuth
 import helpscout
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
-from dataimporter.models import Document
+from dataimporter.models import SyncedObject
 from dataimporter.algolia.engine import algolia_engine
-from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
 
@@ -109,10 +109,9 @@ def _process_customer(requester, customer, mailboxes, folders, users):
         logger.debug("Customer '%s' for user '%s' cannot be used - no data",
                      (customer.id or customer.fullname), requester.username)
         return
-    db_customer, created = Document.objects.get_or_create(
+    db_customer, created = SyncedObject.objects.get_or_create(
         helpscout_customer_id=customer.id,
-        requester=requester,
-        user_id=requester.id
+        user=requester,
     )
     db_customer.helpscout_name = customer.fullname
     logger.debug("Processing Helpscout customer '%s' for user '%s'", customer.fullname, requester.username)
@@ -138,7 +137,7 @@ def _process_customer(requester, customer, mailboxes, folders, users):
 @shared_task
 def process_customer(requester, db_customer, mailboxes, folders, users):
     helpscout_client = init_helpscout_client(requester)
-    db_customer.download_status = Document.PROCESSING
+    db_customer.download_status = SyncedObject.PROCESSING
     db_customer.save()
 
     last_conversation = {}
@@ -186,7 +185,7 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
             "Helpscout customer '%s' for user '%s' seems unchanged, skipping further processing",
             db_customer.helpscout_name, requester.username
         )
-        db_customer.download_status = Document.READY
+        db_customer.download_status = SyncedObject.READY
         db_customer.save()
         return
 
@@ -203,7 +202,7 @@ def process_customer(requester, db_customer, mailboxes, folders, users):
     # build helpscout content
     content = process_conversations(users, conversations, helpscout_client)
     db_customer.helpscout_content = content
-    db_customer.download_status = Document.READY
+    db_customer.download_status = SyncedObject.READY
     db_customer.last_synced = get_utc_timestamp()
     db_customer.save()
     algolia_engine.sync(db_customer, add=False)

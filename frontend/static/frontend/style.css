@@ -13,13 +13,114 @@ div#integrations h1 {
 }
 
 div#content {
-  height: 80%;
   display: table;
   margin: auto;
+  padding-top: 2rem;
 }
 
 div#content_cell {
   height: 100%;
   display: table-cell;
   vertical-align: middle;
+}
+
+.topbar {
+  color: white;
+  background-color: rgba(34, 25, 28, 0.95);
+  right: 0;
+  left: 0;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.topbar .title {
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin: 1rem;
+  text-align: center;
+}
+
+.topbar .paragraph {
+  text-align: left;
+  padding: 1rem;
+}
+
+.bottombar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 0.5rem;
+  text-align: left;
+  width: 100%;
+}
+
+.columns {
+  column-count: 2;
+}
+
+.right {
+  text-align: right;
+}
+
+.dark_bg {
+  background-color: rgba(34, 25, 28, 0.95);
+}
+
+.heading {
+  text-align: center;
+  font-weight: 600;
+}
+
+.error {
+  color: red;
+  font-size: 0.8rem;
+  text-align: center;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.login_form {
+  background-color: rgba(2, 117, 216, 0.1);
+  padding: 1rem 0.5rem 0.5rem 0.5rem;
+  margin-left: 2rem;
+  margin-right: 2rem;
+}
+
+.login_form input {
+  line-height: 1.5em;
+  background: none;
+  font-size: 14px;
+  font-weight: 300;
+  color: black;
+  padding: .3em;
+  border: black 1px solid;
+  border-radius: 3px;
+  width: 170px;
+  background-color: white;
+  margin-left: 0.44rem;
+}
+
+.login_form img {
+  margin-left: 0.26rem;
+  margin-top: 1rem;
+}
+
+.login_button {
+  cursor: pointer;
+  width: 200px;
+  border-radius: 0.15rem;
+  margin-left: 2rem;
+  margin-right: 2rem;
+}
+
+.login_link:hover, .login_link:active, .login_link:focus, .login_button:hover, .login_button:active, .login_button:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.login_link {
+  cursor: pointer;
+  font-size: 0.8rem;
 }

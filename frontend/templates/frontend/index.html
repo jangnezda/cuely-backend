@@ -3,106 +3,76 @@
 {% load i18n %}
 {% load static %}
 
+{% block header %}
+  <div class="topbar">
+    <div class="title">Welcome to Cuely search</div>
+    <div class="paragraph">
+      Create a new account to start using Cuely. As an admin you will be able to add integrations and invite your coworkers to join Cuely.
+      <br/><br/>
+      If you received an invite code, then by using it you will join an existing team and be able to search through your company data immediately.
+    </div>
+  </div>
+  {% if error %}
+  <div class="error">
+    {{ error }}
+  </div>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
 {% if request.user.is_authenticated %}
-<div class="panel panel-default" style="width: 450px">
-  <div class="panel-heading">Manage integrations</div>
-  <div class="panel-body">
-    {% if "google-oauth2" not in backends %}
-      <a class="btn btn-block btn-social btn-google" href="/login/google-oauth2?next=/home/auth_complete/google-oauth2">
-        <span class="fa fa-google"></span>Add Google Drive integration
-      </a>
-    {% else %}
-      <a class="btn disabled btn-block btn-social btn-google" href="#">
-        <span class="fa fa-google"></span>Google Drive integration is ready
-      </a>
-    {% endif %}
-
-    {% if "trello" not in backends %}
-      <a class="btn btn-block btn-social btn-instagram" href="/login/trello?next=/home/auth_complete/trello">
-        <img src="{% static "frontend/trello-mark-white.png" %}" style="padding: 3px">Add Trello integration
-      </a>
-    {% else %}
-      <a class="btn disabled btn-block btn-social btn-instagram" href="#">
-        <img src="{% static "frontend/trello-mark-white.png" %}" style="padding: 3px">Trello integration is ready
-      </a>
-    {% endif %}
-
-    {% if "github" not in backends %}
-      <a class="btn btn-block btn-social btn-github" href="/login/github?next=/home/auth_complete/github">
-        <span class="fa fa-github"></span>Add Github integration
-      </a>
-    {% else %}
-      <a class="btn disabled btn-block btn-social btn-github" href="#">
-        <span class="fa fa-github"></span>Github integration is ready
-      </a>
-    {% endif %}
-
-    {% if "pipedrive-apikeys" not in backends %}
-      <a class="btn btn-block btn-social btn-vk" href="/login/pipedrive-apikeys?next=/home/auth_complete/pipedrive-apikeys">
-        <img src="{% static "frontend/pipedrive-logo.png" %}" style="padding: 3px">Add Pipedrive integration
-      </a>
-    {% else %}
-      <a class="btn disabled btn-block btn-social btn-vk" href="#">
-        <img src="{% static "frontend/pipedrive-logo.png" %}" style="padding: 3px">Pipedrive integration is ready
-      </a>
-    {% endif %}
-
-    {% if "helpscout-apikeys" not in backends %}
-      <a class="btn btn-block btn-social btn-reddit" href="/login/helpscout-apikeys?next=/home/auth_complete/helpscout-apikeys">
-        <img src="{% static "frontend/helpscout-logo.png" %}" style="padding: 3px">Add Helpscout integration
-      </a>
-    {% else %}
-      <a class="btn disabled btn-block btn-social btn-reddit" href="#">
-        <img src="{% static "frontend/helpscout-logo.png" %}" style="padding: 3px">Helpscout integration is ready
-      </a>
-    {% endif %}
-
-		{% if "helpscout-docs-apikeys" not in backends %}
-			<a class="btn btn-block btn-social btn-reddit" href="/login/helpscout-docs-apikeys?next=/home/auth_complete/helpscout-docs-apikeys">
-				<img src="{% static "frontend/helpscout-logo.png" %}" style="padding: 3px">Add Helpscout DOCS integration
-			</a>
-		{% else %}
-			<a class="btn disabled btn-block btn-social btn-reddit" href="#">
-				<img src="{% static "frontend/helpscout-logo.png" %}" style="padding: 3px">Helpscout DOCS integration is ready
-			</a>
-		{% endif %}
-
-		{% if "jira-oauth" not in backends %}
-			<a class="btn btn-block btn-social btn-reddit" href="/login/jira-oauth?next=/home/auth_complete/jira-oauth">
-				<img src="{% static "frontend/jira-logo.png" %}" style="padding: 3px">Add JIRA integration
-			</a>
-		{% else %}
-			<a class="btn disabled btn-block btn-social btn-reddit" href="#">
-				<img src="{% static "frontend/jira-logo.png" %}" style="padding: 3px">JIRA integration is ready
-			</a>
-		{% endif %}
-
-  </div>
-</div>
+PINKO
 {% else %}
-<div class="panel panel-default" style="width: 450px;">
-  <div class="panel-heading">
-    <p style="width: 100%; text-align: center; font-weight: 600">Welcome to Cuely search app</p>
-		<p>
-			Please authenticate with one of the social accounts below to start using the app.
-      Cuely will begin syncing data belonging to your chosen account after signing in.
-		</p>
+<div> 
+  <a href="#collapseNew" class="btn btn-outline-primary login_button" role="button" data-toggle="collapse" aria-pressed="false" aria-expanded="false" aria-controls="collapseNew">Create a new account</a>
+  <div class="collapse" id="collapseNew">
+    <div class="login_form">
+      <input id="input_new" name="team_name" type="text" maxlength="100" placeholder="Company name" oninput="clearStyle(this);" />
+      <br/>
+      <a href="#" onclick="openLink(document.getElementById('input_new'));">
+        <img src="{% static "frontend/btn_google_signin_dark_normal_web_small.png" %}" />
+      </a>
+    </div>
   </div>
-  <div class="panel-body" style="text-align: center;padding: 50px;">
-		<a href="/login/google-oauth2/?next=/home/auth_complete/google-oauth2">
-			<img src="{% static "frontend/btn_google_signin_dark_normal_web.png" %}" />
-		</a>
-    <hr>
-		<a href="/login/trello/?next=/home/auth_complete/trello">
-			<img src="{% static "frontend/sign-in-with-trello.png" %}" />
-		</a>
-    <hr>
-		<a href="/login/github/?next=/home/auth_complete/github">
-			<img src="{% static "frontend/sign-in-with-github.png" %}" />
-		</a>
-	</div>
+  <hr>
+  <a href="#collapseExisting" class="btn btn-outline-primary login_button" role="button" data-toggle="collapse" aria-pressed="false" aria-expanded="false" aria-controls="collapseExisting">Use the invite code</a>
+  <div class="collapse" id="collapseExisting">
+    <div class="login_form">
+      <input id="input_existing" name="invite_code" type="text" maxlength="100" placeholder="Invite code" oninput="clearStyle(this);" />
+      <br/>
+      <a href="#" onclick="openLink(document.getElementById('input_existing'));">
+        <img src="{% static "frontend/btn_google_signin_dark_normal_web_small.png" %}" />
+      </a>
+    </div>
+  </div>
 </div>
+
+<script type="text/javascript"><!--
+  function openLink(element) {
+    if (element.value.trim() == '') {
+      element.style.backgroundColor = "rgba(255, 0, 0, 0.1)";
+      element.value = '';
+      element.focus();
+    } else {
+      window.location.href = "/login/google-oauth2/?next=/home/auth_complete/google-oauth2&signup=true&" + element.name + "=" + element.value;
+    }
+  }
+
+  function clearStyle(element) {
+    element.style.backgroundColor = "white";
+  }
+//--></script>
 {% endif %}
 
+{% endblock %}
+
+{% block footer %}
+<div class="bottombar columns">
+  <div>
+    <a href="login/" class="btn btn-link login_link">Already a user? Login here.</a>
+  </div>
+  <div class="right">
+    <a href="https://cuely.co" target="_blank" class="btn btn-link login_link">What is Cuely?</a>
+  </div>
+</div>
 {% endblock %}

@@ -11,10 +11,15 @@ class DataimporterConfig(AppConfig):
     def ready(self):
         try:
             from dataimporter.algolia.engine import algolia_engine
-            from dataimporter.algolia.index import index_list
-            AlgoliaIndex = self.get_model("AlgoliaIndex")
-            algolia_engine.register_db_model(AlgoliaIndex)
-            for idx in index_list():
-                algolia_engine.register(idx.name, idx.settings, idx.model_type)
+            from dataimporter.algolia.index import default_index
+            # have to use name-based lookup, because models definitions
+            # weren't configured/injected yet at this point
+            AlgoliaIndex = self.get_model('AlgoliaIndex')
+            SyncedObject = self.get_model('SyncedObject')
+            name, fields, settings = default_index()
+            algolia_engine.setup(AlgoliaIndex, SyncedObject, fields)
+            algolia_engine.register(name, settings)
         except:
+            # should not happen, except on initial Django project setup,
+            # when the db models haven't been migrated yet
             logger.exception("Could not initialize Algolia Engine")

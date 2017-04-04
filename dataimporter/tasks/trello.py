@@ -11,10 +11,10 @@ from celery import shared_task, subtask
 from django.conf import settings
 import markdown
 
+from social_django.models import UserSocialAuth
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
-from dataimporter.models import Document
+from dataimporter.models import SyncedObject
 from dataimporter.algolia.engine import algolia_engine
-from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
 
@@ -50,11 +50,10 @@ def collect_boards(requester):
     orgs = dict()
 
     for board in trello_client.list_boards(board_filter='open,closed'):
-        db_board, created = Document.objects.get_or_create(
+        db_board, created = SyncedObject.objects.get_or_create(
             trello_board_id=board.id,
             trello_card_id__isnull=True,
-            requester=requester,
-            user_id=requester.id
+            user=requester
         )
         board_last_activity = board.raw.get('dateLastActivity')
         if not board_last_activity:
@@ -70,7 +69,7 @@ def collect_boards(requester):
 
         last_activity = parse_dt(board_last_activity).isoformat()
         last_activity_ts = int(parse_dt(board_last_activity).timestamp())
-        if not created and db_board.download_status == Document.READY and \
+        if not created and db_board.download_status == SyncedObject.READY and \
                 (db_board.last_updated_ts and db_board.last_updated_ts >= last_activity_ts):
             logger.debug("Trello board '%s' for user '%s' hasn't changed", board.name[:50], requester.username)
             continue
@@ -122,7 +121,7 @@ def collect_boards(requester):
         db_board.trello_board_members = list(all_members.values())
 
         db_board.last_synced = get_utc_timestamp()
-        db_board.download_status = Document.READY
+        db_board.download_status = SyncedObject.READY
         db_board.save()
         algolia_engine.sync(db_board, add=created)
         subtask(collect_cards).delay(requester, db_board, board.name, all_members, all_lists)
@@ -177,11 +176,10 @@ def collect_cards_internal(requester, board, board_members, checklists, lists, c
             filters['before'] = last_card_id
         cards = board.get_cards(filters=filters, card_filter=card_status)
         for card in cards:
-            db_card, created = Document.objects.get_or_create(
+            db_card, created = SyncedObject.objects.get_or_create(
                 trello_board_id=board.id,
                 trello_card_id=card.id,
-                requester=requester,
-                user_id=requester.id
+                user=requester
             )
             card_last_activity = card.raw.get('dateLastActivity')
             last_activity = parse_dt(card_last_activity).isoformat()
@@ -213,7 +211,7 @@ def collect_cards_internal(requester, board, board_members, checklists, lists, c
             db_card.trello_board_name = board.name
             db_card.trello_list = lists.get(card.idList)
             db_card.last_synced = get_utc_timestamp()
-            db_card.download_status = Document.READY
+            db_card.download_status = SyncedObject.READY
             db_card.save()
             algolia_engine.sync(db_card, add=created)
             last_card_id = card.id

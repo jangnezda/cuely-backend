@@ -7,11 +7,11 @@ from datetime import datetime
 from dateutil.parser import parse as parse_dt
 from celery import shared_task, subtask
 
+from social_django.models import UserSocialAuth
 import helpscout
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
-from dataimporter.models import Document
+from dataimporter.models import SyncedObject
 from dataimporter.algolia.engine import algolia_engine
-from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
 
@@ -80,10 +80,9 @@ def collect_articles(requester):
             if not articles or articles.count < 1:
                 break
             for article in articles:
-                db_doc, created = Document.objects.get_or_create(
+                db_doc, created = SyncedObject.objects.get_or_create(
                     helpscout_document_id=article.id,
-                    requester=requester,
-                    user_id=requester.id
+                    user=requester
                 )
                 logger.debug("Processing Helpscout article '%s' for user '%s'", article.name, requester.username)
                 db_doc.helpscout_document_title = 'Doc: {}'.format(article.name)
@@ -120,7 +119,7 @@ def collect_articles(requester):
 @shared_task
 def process_article(requester, db_doc, cats):
     docs_client = init_helpscout_docs_client(requester)
-    db_doc.download_status = Document.PROCESSING
+    db_doc.download_status = SyncedObject.PROCESSING
     db_doc.save()
 
     article_details = docs_client.article(db_doc.helpscout_document_id)
@@ -128,7 +127,7 @@ def process_article(requester, db_doc, cats):
         [c for c in [cats.get(x, [None])[0] for x in article_details.categories] if c and c != 'Uncategorized']
     db_doc.helpscout_document_content = cut_utf_string(article_details.text, 9000, 300)
 
-    db_doc.download_status = Document.READY
+    db_doc.download_status = SyncedObject.READY
     db_doc.last_synced = get_utc_timestamp()
     db_doc.save()
     algolia_engine.sync(db_doc, add=False)

@@ -1,179 +1,220 @@
 import os
-from dataimporter.models import AlgoliaIndex, Document
 
 
-class DocumentIndex(object):
-    def __init__(self, name):
-        self.name = name
-        self.model_type = AlgoliaIndex.DOCUMENT
+FIELDS = [
+    # Common
+    'primary_keywords',
+    'secondary_keywords',
+    'user_id',
+    'team_id',
+    'last_updated_ts',
+    'last_updated',
+    'webview_link',
 
-    fields = [
-        # Common
-        'last_updated_ts',
-        'last_updated',
-        'webview_link',
-        'user_id',
-        'requester',
-        'primary_keywords',
-        'secondary_keywords',
+    # Gdrive
+    'gdrive_document_id',
+    'gdrive_title',
+    'gdrive_content',
+    'gdrive_mime_type',
+    'gdrive_icon_link',
+    'gdrive_owner_display_name',
+    'gdrive_owner_photo_link',
+    'gdrive_modifier_display_name',
+    'gdrive_modifier_photo_link',
+    'gdrive_thumbnail_link',
+    'gdrive_path',
 
-        # Document
-        'document_id',
-        'title',
-        'content',
-        'mime_type',
-        'icon_link',
-        'owner_display_name',
-        'owner_photo_link',
-        'modifier_display_name',
-        'modifier_photo_link',
-        'thumbnail_link',
-        'path',
+    # Pipedrive
+    'pipedrive_deal_id',
+    'pipedrive_title',
+    'pipedrive_deal_company',
+    'pipedrive_deal_value',
+    'pipedrive_deal_currency',
+    'pipedrive_deal_status',
+    'pipedrive_deal_stage',
+    'pipedrive_content',
 
-        # Pipedrive
-        'pipedrive_deal_id',
-        'pipedrive_title',
-        'pipedrive_deal_company',
-        'pipedrive_deal_value',
-        'pipedrive_deal_currency',
-        'pipedrive_deal_status',
-        'pipedrive_deal_stage',
-        'pipedrive_content',
+    # Helpscout
+    'helpscout_customer_id',
+    'helpscout_title',
+    'helpscout_name',
+    'helpscout_company',
+    'helpscout_emails',
+    'helpscout_mailbox',
+    'helpscout_mailbox_id',
+    'helpscout_folder',
+    'helpscout_status',
+    'helpscout_assigned',
+    'helpscout_content',
+    'helpscout_document_id',
+    'helpscout_document_title',
+    'helpscout_document_collection',
+    'helpscout_document_categories',
+    'helpscout_document_content',
+    'helpscout_document_users',
+    'helpscout_document_keywords',
+    'helpscout_document_status',
+    'helpscout_document_public_link',
 
-        # Helpscout
-        'helpscout_customer_id',
-        'helpscout_title',
-        'helpscout_name',
+    # Jira
+    'jira_issue_key',
+    'jira_issue_title',
+    'jira_issue_status',
+    'jira_issue_type',
+    'jira_issue_priority',
+    'jira_issue_description',
+    'jira_issue_duedate',
+    'jira_issue_assignee',
+    'jira_issue_reporter',
+    'jira_issue_labels',
+    'jira_project_name',
+    'jira_project_key',
+    'jira_project_link',
+
+    # Github
+    'github_repo_id',
+    'github_title',
+    'github_repo_owner',
+    'github_repo_full_name',
+    'github_repo_description',
+    'github_repo_contributors',
+    'github_repo_content',
+    'github_repo_readme',
+    'github_repo_commit_count',
+    'github_commit_id',
+    'github_commit_content',
+    'github_commit_committer',
+    'github_commit_files',
+    'github_file_id',
+    'github_file_committers',
+    'github_file_path',
+    'github_issue_content',
+    'github_issue_state',
+    'github_issue_labels',
+    'github_issue_reporter',
+    'github_issue_assignees',
+
+    # Trello
+    'trello_title',
+    'trello_board_id',
+    'trello_board_status',
+    'trello_board_org',
+    'trello_board_members',
+    'trello_card_id',
+    'trello_card_status',
+    'trello_card_members',
+    'trello_list',
+    'trello_board_name',
+    'trello_content'
+]
+
+SETTINGS = {
+    # list of attributes that are used for searching
+    'attributesToIndex': [
+        'unordered(primary_keywords)',
+        'unordered(secondary_keywords)',
+        'unordered(gdrive_title)',
+        'unordered(pipedrive_title)',
+        'unordered(trello_title)',
+        'unordered(github_title)',
+        'unordered(helpscout_title)',
+        'unordered(helpscout_document_title)',
+        'unordered(jira_issue_title)',
+        'gdrive_owner_display_name',
+        'gdrive_modifier_display_name',
+        'unordered(gdrive_path)',
+        'jira_issue_key',
+        'github_repo_full_name',
+        'github_repo_owner',
+        'jira_issue_status',
+        'jira_project_name',
         'helpscout_company',
         'helpscout_emails',
         'helpscout_mailbox',
-        'helpscout_mailbox_id',
-        'helpscout_folder',
-        'helpscout_status',
-        'helpscout_assigned',
-        'helpscout_content',
-        'helpscout_document_id',
-        'helpscout_document_title',
-        'helpscout_document_collection',
-        'helpscout_document_categories',
-        'helpscout_document_content',
-        'helpscout_document_users',
-        'helpscout_document_keywords',
-        'helpscout_document_status',
-        'helpscout_document_public_link',
-
-        # Jira
-        'jira_issue_key',
-        'jira_issue_title',
-        'jira_issue_status',
         'jira_issue_type',
         'jira_issue_priority',
-        'jira_issue_description',
-        'jira_issue_duedate',
-        'jira_issue_assignee',
-        'jira_issue_reporter',
         'jira_issue_labels',
-        'jira_project_name',
-        'jira_project_key',
-        'jira_project_link',
-
-        # Github
-        'github_repo_id',
-        'github_title',
-        'github_repo_owner',
-        'github_repo_full_name',
-        'github_repo_description',
-        'github_repo_contributors',
-        'github_repo_content',
-        'github_repo_readme',
-        'github_repo_commit_count',
-        'github_commit_id',
-        'github_commit_content',
-        'github_commit_committer',
-        'github_commit_files',
-        'github_file_id',
-        'github_file_committers',
-        'github_file_path',
-        'github_issue_content',
+        'github_repo_contributors.name',
+        'github_commit_committer.name',
+        'github_issue_reporter.name',
+        'github_file_committers.name',
+        'github_issue_assignees.name',
+        'jira_issue_assignee.name',
+        'jira_issue_reporter.name',
+        'helpscout_document_users.name',
+        'helpscout_document_categories',
+        'helpscout_document_collection',
+        'trello_board_members.name',
+        'trello_card.members.name',
         'github_issue_state',
         'github_issue_labels',
-        'github_issue_reporter',
-        'github_issue_assignees',
-
-        # Trello
-        'trello_title',
-        'trello_board_id',
+        'helpscout_status',
+        'pipedrive_deal_status',
+        'pipedrive_deal_stage',
+        'trello_board.name',
+        'trello_list.name',
         'trello_board_status',
-        'trello_board_org',
-        'trello_board_members',
-        'trello_card_id',
         'trello_card_status',
-        'trello_card_members',
-        'trello_list',
-        'trello_board_name',
-        'trello_content'
-    ]
+        'trello_board_org.name',
+        'trello_content.checklists.name',
+        'trello_content.checklists.items.name',
+        'trello_content.lists.name',
+        'trello_content.lists.cards.name',
+        'github_file_path',
+        'github_repo_description',
+        'jira_issue_description',
+        'gdrive_content',
+        'trello_content.description',
+        'github_repo_content',
+        'github_commit_content',
+        'github_issue_content.body',
+        'helpscout_content',
+        'pipedrive_content',
+        'helpscout_document_content',
+    ],
+    # adjust ranking formula
+    'ranking': [
+        'typo',
+        'words',
+        'filters',
+        'exact',
+        'attribute',
+        'proximity',
+        'custom'
+    ],
+    'customRanking': [
+        'desc(last_updated_ts)'
+    ],
+    'allowTyposOnNumericTokens': False,
+    'removeWordsIfNoResults': 'none',
+    'replaceSynonymsInHighlight': True,
+    'replicas': [],
+    'separatorsToIndex': '#',
+    'snippetEllipsisText': '',
+    'typoTolerance': 'true',
+    'unretrievableAttributes': None,
+    'removeStopWords': True,
+    'separatorsToIndex': '#',
+    'attributesToRetrieve': None,
+    'attributesToSnippet': None,
+    'distinct': False,
+    'exactOnSingleWordQuery': 'attribute',
+    'highlightPostTag': '</em>',
+    'highlightPreTag': '<em>',
+    'hitsPerPage': 20,
+    'ignorePlurals': True,
+    'maxValuesPerFacet': 100,
+    'minWordSizefor1Typo': 4,
+    'minWordSizefor2Typos': 8,
+    'numericAttributesToIndex': None,
+    'optionalWords': None,
+    'paginationLimitedTo': 1000,
+    'queryType': 'prefixLast',
+    'advancedSyntax': True
+}
 
-    settings = {
-        # list of attributes that are used for searching
-        'attributesToIndex': [
-            'unordered(primary_keywords)',
-            'unordered(secondary_keywords)',
-            'unordered(title)',
-            'unordered(pipedrive_title)',
-            'unordered(helpscout_title)',
-            'unordered(helpscout_document_title)',
-            'unordered(jira_issue_title)',
-            'owner_display_name',
-            'modifier_display_name',
-            'unordered(path)',
-            'jira_issue_key',
-            'helpscout_company',
-            'helpscout_emails',
-            'helpscout_mailbox',
-            'jira_issue_type',
-            'jira_issue_priority',
-            'jira_issue_labels',
-            'jira_issue_assignee.name',
-            'jira_issue_reporter.name',
-            'helpscout_document_users.name',
-            'helpscout_document_categories',
-            'helpscout_document_collection',
-            'helpscout_status',
-            'pipedrive_deal_status',
-            'pipedrive_deal_stage',
-            'helpscout_content',
-            'content',
-            'pipedrive_content',
-            'helpscout_document_content',
-            'jira_issue_description'
-        ],
-        # adjust ranking formula
-        'ranking': [
-            'typo',
-            'words',
-            'filters',
-            'exact',
-            'attribute',
-            'proximity'
-        ],
-        'customRanking': [
-            'desc(last_updated_ts)'
-        ],
-        'allowTyposOnNumericTokens': False,
-        'removeStopWords': True,
-        'separatorsToIndex': '#',
-        'advancedSyntax': True
-    }
 
-
-def index_list():
+def default_index():
     # only auto-initialize default index (other indices are initialized dynamically
     # via DB AlgoliaIndex model)
-    default_index_name = os.environ["ALGOLIA_INDEX_NAME"]
-    default_index = DocumentIndex(default_index_name)
-    return [default_index]
-
-INDEX_MODEL_MAP = {
-    AlgoliaIndex.DOCUMENT: (Document, DocumentIndex.fields)
-}
+    return (os.environ["ALGOLIA_INDEX_NAME"], FIELDS, SETTINGS)

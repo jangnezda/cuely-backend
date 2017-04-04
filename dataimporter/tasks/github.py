@@ -11,10 +11,10 @@ from celery import shared_task, subtask
 import markdown
 from mdx_gfm import GithubFlavoredMarkdownExtension
 
+from social_django.models import UserSocialAuth
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
-from dataimporter.models import Document, get_or_create
+from dataimporter.models import SyncedObject, get_or_create
 from dataimporter.algolia.engine import algolia_engine
-from social.apps.django_app.default.models import UserSocialAuth
 import logging
 logger = logging.getLogger(__name__)
 
@@ -65,13 +65,12 @@ def collect_repos(requester):
             logger.debug("Skipping forked github repo '%s' for user '%s'", repo.full_name, requester.username)
             continue
 
-        db_repo, created = Document.objects.get_or_create(
+        db_repo, created = SyncedObject.objects.get_or_create(
             github_repo_id=repo.id,
             github_commit_id__isnull=True,
             github_file_id__isnull=True,
             github_issue_id__isnull=True,
-            requester=requester,
-            user_id=requester.id
+            user=requester,
         )
         db_repo.primary_keywords = GITHUB_PRIMARY_KEYWORDS
         db_repo.secondary_keywords = GITHUB_SECONDARY_KEYWORDS['repo']
@@ -138,7 +137,7 @@ def collect_repos(requester):
         )
 
         db_repo.last_synced = get_utc_timestamp()
-        db_repo.download_status = Document.READY
+        db_repo.download_status = SyncedObject.READY
         db_repo.save()
 
 
@@ -164,11 +163,10 @@ def collect_issues(requester, repo_id, repo_name, created):
 
     i = 0
     for issue in repo.get_issues(**search_args):
-        db_issue, created = Document.objects.get_or_create(
+        db_issue, created = SyncedObject.objects.get_or_create(
             github_issue_id=issue.id,
             github_repo_id=repo_id,
-            requester=requester,
-            user_id=requester.id
+            user=requester,
         )
         if not created and db_issue.last_updated_ts and db_issue.last_updated_ts >= issue.updated_at.timestamp():
             continue
@@ -229,7 +227,7 @@ def collect_issues(requester, repo_id, repo_name, created):
 
         algolia_engine.sync(db_issue, add=created)
         db_issue.last_synced = get_utc_timestamp()
-        db_issue.download_status = Document.READY
+        db_issue.download_status = SyncedObject.READY
         db_issue.save()
         # add sleep every 50 issues to avoid breaking API rate limits
         i = i + 1
@@ -253,11 +251,10 @@ def collect_files(requester, repo_id, repo_name, repo_url, default_branch, enric
     repo = github_client.get_repo(full_name_or_id=repo_name)
     new_files = []
     for f in repo.get_git_tree(sha=repo.default_branch, recursive=True).tree:
-        db_file, created = Document.objects.get_or_create(
+        db_file, created = SyncedObject.objects.get_or_create(
             github_file_id=_compute_sha('{}{}'.format(repo_id, f.path)),
             github_repo_id=repo_id,
-            requester=requester,
-            user_id=requester.id
+            user=requester,
         )
         if created:
             new_files.append({
@@ -277,7 +274,7 @@ def collect_files(requester, repo_id, repo_name, repo_url, default_branch, enric
             db_file.webview_link = '{}/blob/{}/{}'.format(repo_url, default_branch, f.path)
             algolia_engine.sync(db_file, add=created)
         db_file.last_synced = get_utc_timestamp()
-        db_file.download_status = Document.PENDING
+        db_file.download_status = SyncedObject.PENDING
         db_file.save()
     # run enrich_files() for all new_files in chunks of 50 items
     i = 0
@@ -307,11 +304,10 @@ def enrich_files(requester, files, repo_id, repo_name, repo_url, default_branch)
 
     repo = github_client.get_repo(full_name_or_id=repo_name)
     for f in files:
-        db_file, created = Document.objects.get_or_create(
+        db_file, created = SyncedObject.objects.get_or_create(
             github_file_id=_compute_sha('{}{}'.format(repo_id, f.get('filename'))),
             github_repo_id=repo_id,
-            requester=requester,
-            user_id=requester.id
+            user=requester,
         )
         if f.get('action') == 'removed':
             db_file.delete()
@@ -351,7 +347,7 @@ def enrich_files(requester, files, repo_id, repo_name, repo_url, default_branch)
         algolia_engine.sync(db_file, add=created)
 
         db_file.last_synced = get_utc_timestamp()
-        db_file.download_status = Document.READY
+        db_file.download_status = SyncedObject.READY
         db_file.save()
         # add sleep to avoid breaking API rate limits
         time.sleep(2)
@@ -367,7 +363,7 @@ def collect_commits(requester, repo_id, repo_name, repo_url, default_branch, com
     (at least should not in a normally run repository).
     """
     max_commits = 200
-    was_synced = Document.objects.filter(
+    was_synced = SyncedObject.objects.filter(
         user_id=requester.id,
         github_repo_id=repo_id,
         github_commit_id__isnull=False).count() >= min(commit_count, max_commits)
@@ -383,11 +379,10 @@ def collect_commits(requester, repo_id, repo_name, repo_url, default_branch, com
             break
         i = i + 1
         db_commit, created = get_or_create(
-            model=Document,
+            model=SyncedObject,
             github_commit_id=cmt.sha,
             github_repo_id=repo_id,
-            requester=requester,
-            user_id=requester.id
+            user=requester,
         )
         if not created and was_synced:
             logger.debug("Found already synced commit, skipping further commits syncing for user '%s' and repo '%s'",
@@ -429,7 +424,7 @@ def collect_commits(requester, repo_id, repo_name, repo_url, default_branch, com
         algolia_engine.sync(db_commit, add=created)
 
         db_commit.last_synced = get_utc_timestamp()
-        db_commit.download_status = Document.READY
+        db_commit.download_status = SyncedObject.READY
         db_commit.save()
         # add sleep of half a second to avoid breaking API rate limits
         time.sleep(0.5)

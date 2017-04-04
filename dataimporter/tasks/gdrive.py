@@ -6,8 +6,9 @@ from dateutil.parser import parse as parse_date
 from apiclient import discovery
 from celery import shared_task, subtask
 from oauth2client.client import GoogleCredentials
+from social_django.models import UserSocialAuth
 
-from dataimporter.models import Document, SocialAttributes, get_or_create
+from dataimporter.models import SyncedObject, TeamIntegration, get_or_create, get_integration
 from dataimporter.algolia.engine import algolia_engine
 from dataimporter.task_util import should_sync, should_queue, cut_utf_string, get_utc_timestamp
 import logging
@@ -83,21 +84,23 @@ GDRIVE_KEYWORDS = {
 }
 
 
-def start_synchronization(user):
-    """ Run initial syncing of user's data in external systems. Gdrive-only at the moment. """
+def start_synchronization(user, auth_id):
+    """ Run initial syncing of user's docs in GDrive. """
     if should_sync(user, 'google-oauth2', 'tasks.gdrive'):
-        access_token, refresh_token = get_google_tokens(user)
+        auth = UserSocialAuth.objects.get(id=auth_id)
+        access_token, refresh_token = get_google_tokens(auth)
 
         # ## gdrive ###################
         # 1. Set the marker to have a reference point for later calls to gdrive changes api.
         #    Without setting this starting point, changes api won't return any changes.
         service = connect_to_gdrive(access_token, refresh_token)
         response = service.changes().getStartPageToken().execute()
-        SocialAttributes.objects.update_or_create(
-            user=user, defaults={'start_page_token': response.get('startPageToken')})
+        integration = get_integration(auth)
+        integration.settings = {'start_page_token': response.get('startPageToken')}
+        integration.save()
 
         # 2. Start the synchronization
-        collect_gdrive_docs.delay(user, access_token, refresh_token)
+        collect_gdrive_docs.delay(user, isinstance(integration, TeamIntegration), access_token, refresh_token)
     else:
         logger.info("Gdrive oauth token for user '%s' already in use, skipping sync ...", user.username)
 
@@ -106,21 +109,33 @@ def start_synchronization(user):
 @should_queue
 def update_synchronization():
     """
-    Check for new/updated files in external systems for all users. Should be called periodically after initial syncing.
-    Gdrive-only at the moment.
+    Check for new/updated files in external systems for all users.
+    Should be called periodically after initial syncing.
     """
-    logger.debug("Update synchronizations started")
-    for sa in SocialAttributes.objects.filter(start_page_token__isnull=False):
-        if should_sync(sa.user, 'google-oauth2', 'tasks.gdrive'):
-            if sa.user.social_auth.filter(provider='google-oauth2').first():
-                access_token, refresh_token = get_google_tokens(sa.user)
-                subtask(sync_gdrive_changes).delay(sa.user, access_token, refresh_token, sa.start_page_token)
+    logger.debug("Gdrive update synchronizations started")
+
+    for usa in UserSocialAuth.objects.filter(provider='google-oauth2'):
+        integration = get_integration(usa)
+        start_page_token = integration.settings.get('start_page_token')
+        if not start_page_token:
+            logger.info("User %s has no start_page_token for Gdrive. Skipping sync ...", usa.user.username)
+            continue
+
+        if should_sync(usa.user, usa.provider, 'tasks.gdrive'):
+            access_token, refresh_token = get_google_tokens(usa)
+            subtask(collect_gdrive_changes).delay(
+                usa.user,
+                isinstance(integration, TeamIntegration),
+                access_token,
+                refresh_token,
+                start_page_token
+            )
         else:
-            logger.info("Gdrive oauth token for user '%s' already in use, skipping sync ...", sa.user.username)
+            logger.info("Gdrive oauth token for user '%s' already in use, skipping sync ...", usa.user.username)
 
 
 @shared_task
-def collect_gdrive_docs(requester, access_token, refresh_token):
+def collect_gdrive_docs(requester, is_team, access_token, refresh_token):
     logger.debug("LIST gdrive files")
 
     def _call_gdrive(service, page_token):
@@ -136,28 +151,11 @@ def collect_gdrive_docs(requester, access_token, refresh_token):
             params['pageToken'] = page_token
         return service.files().list(**params).execute()
 
-    process_gdrive_docs(requester, access_token, refresh_token, files_fn=_call_gdrive, json_key='files')
+    process_gdrive_docs(requester, is_team, access_token, refresh_token, files_fn=_call_gdrive, json_key='files')
 
 
 @shared_task
-def collect_gdrive_folders(requester, access_token, refresh_token):
-    logger.debug("LIST gdrive folders")
-
-    def _call_gdrive(service, page_token):
-        params = {
-            'q': "mimeType = 'application/vnd.google-apps.folder'",
-            'pageSize': 300,
-            'fields': 'files({}),nextPageToken'.format(FILE_FIELDSET)
-        }
-        if page_token:
-            params['pageToken'] = page_token
-        return service.files().list(**params).execute()
-
-    process_gdrive_docs(requester, access_token, refresh_token, files_fn=_call_gdrive, json_key='files')
-
-
-@shared_task
-def sync_gdrive_changes(requester, access_token, refresh_token, start_page_token):
+def collect_gdrive_changes(requester, is_team, access_token, refresh_token, start_page_token):
     logger.debug("CHANGES gdrive files")
 
     def _call_gdrive(service, page_token):
@@ -173,16 +171,18 @@ def sync_gdrive_changes(requester, access_token, refresh_token, start_page_token
 
     new_start_page_token = process_gdrive_docs(
         requester,
+        is_team,
         access_token,
         refresh_token,
         files_fn=_call_gdrive,
         json_key='changes'
     )
     if new_start_page_token:
-        SocialAttributes.objects.update_or_create(user=requester, defaults={'start_page_token': new_start_page_token})
+        pass
+        # SocialAttributes.objects.update_or_create(user=requester, defaults={'start_page_token': new_start_page_token})
 
 
-def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_key):
+def process_gdrive_docs(requester, is_team, access_token, refresh_token, files_fn, json_key):
     service = connect_to_gdrive(access_token, refresh_token)
     folders = {}
 
@@ -212,10 +212,9 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             hidden = is_hidden(item.get('description')) or any(is_hidden_in_folder(f, folders) for f in parents)
             if item.get('trashed') or hidden:
                 # file was removed or hidden
-                Document.objects.filter(
-                    document_id=item['id'],
-                    requester=requester,
-                    user_id=requester.id
+                SyncedObject.objects.filter(
+                    gdrive_document_id=item['id'],
+                    user=requester,
                 ).delete()
                 continue
 
@@ -224,24 +223,24 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
             path = get_gdrive_path(parent, folders)
 
             doc, created = get_or_create(
-                model=Document,
-                document_id=item['id'],
-                requester=requester,
-                user_id=requester.id
+                model=SyncedObject,
+                gdrive_document_id=item['id'],
+                user=requester,
+                team=requester.userattributes.team if is_team else None
             )
-            doc.mime_type = item.get('mimeType').lower()
-            doc.title = item.get('name')
+            doc.gdrive_mime_type = item.get('mimeType').lower()
+            doc.gdrive_title = item.get('name')
             doc.webview_link = item.get('webViewLink')
-            doc.icon_link = item.get('iconLink')
-            doc.thumbnail_link = item.get('thumbnailLink')
+            doc.gdrive_icon_link = item.get('iconLink')
+            doc.gdrive_thumbnail_link = item.get('thumbnailLink')
             doc.last_updated = item.get('modifiedTime')
-            doc.path = path
+            doc.gdrive_path = path
             last_modified_on_server = parse_date(doc.last_updated)
             doc.last_updated_ts = last_modified_on_server.timestamp()
-            doc.modifier_display_name = item.get('lastModifyingUser', {}).get('displayName')
-            doc.modifier_photo_link = item.get('lastModifyingUser', {}).get('photoLink')
-            doc.owner_display_name = item['owners'][0]['displayName']
-            doc.owner_photo_link = item.get('owners', [{}])[0].get('photoLink')
+            doc.gdrive_modifier_display_name = item.get('lastModifyingUser', {}).get('displayName')
+            doc.gdrive_modifier_photo_link = item.get('lastModifyingUser', {}).get('photoLink')
+            doc.gdrive_owner_display_name = item['owners'][0]['displayName']
+            doc.gdrive_owner_photo_link = item.get('owners', [{}])[0].get('photoLink')
             doc.primary_keywords = GDRIVE_KEYWORDS['primary']
             doc.secondary_keywords = GDRIVE_KEYWORDS['secondary'][doc.mime_type] \
                 if doc.mime_type in GDRIVE_KEYWORDS['secondary'] else None
@@ -252,15 +251,15 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
                     can_download = False
             if can_download:
                 if not created:
-                    if doc.download_status is Document.READY and can_download and \
+                    if doc.download_status is SyncedObject.READY and can_download and \
                             (doc.last_synced is None or last_modified_on_server > doc.last_synced):
-                        doc.download_status = Document.PENDING
+                        doc.download_status = SyncedObject.PENDING
                         subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
                 else:
                     algolia_engine.sync(doc, add=created)
                     subtask(download_gdrive_document).delay(doc, access_token, refresh_token)
             else:
-                doc.download_status = Document.READY
+                doc.download_status = SyncedObject.READY
                 doc.last_synced = get_utc_timestamp()
                 doc.save()
                 algolia_engine.sync(doc, add=False)
@@ -274,7 +273,7 @@ def process_gdrive_docs(requester, access_token, refresh_token, files_fn, json_k
 
 
 def desync_folder(folder_id, folders, requester, service):
-    db_folder = Document.objects.filter(document_id=folder_id, user_id=requester.id)
+    db_folder = SyncedObject.objects.filter(gdrive_document_id=folder_id, user_id=requester.id)
     if db_folder.exists():
         page_token = None
         while True:
@@ -290,7 +289,7 @@ def desync_folder(folder_id, folders, requester, service):
             for cid in child_ids:
                 if cid in folders:
                     desync_folder(cid, folders, requester, service)
-            Document.objects.filter(document_id__in=child_ids, user_id=requester.id).delete()
+            SyncedObject.objects.filter(gdrive_document_id__in=child_ids, user_id=requester.id).delete()
             page_token = children.get('nextPageToken')
             if not page_token:
                 break
@@ -358,7 +357,7 @@ def get_gdrive_path(file_id, folders):
 
 @shared_task
 def download_gdrive_document(doc, access_token, refresh_token):
-    doc.download_status = Document.PROCESSING
+    doc.download_status = SyncedObject.PROCESSING
     doc.save()
 
     try:
@@ -367,25 +366,24 @@ def download_gdrive_document(doc, access_token, refresh_token):
         request = None
         if doc.mime_type.startswith('application/vnd.google-apps.'):
             export_mime = 'text/csv' if 'spreadsheet' in doc.mime_type else 'text/plain'
-            request = service.files().export_media(fileId=doc.document_id, mimeType=export_mime)
+            request = service.files().export_media(fileId=doc.gdrive_document_id, mimeType=export_mime)
         else:
-            request = service.files().get_media(fileId=doc.document_id)
+            request = service.files().get_media(fileId=doc.gdrive_document_id)
         response = request.execute()
-        logger.info("Done downloading {} [{}]".format(doc.title, doc.document_id))
+        logger.info("Done downloading {} [{}]".format(doc.title, doc.gdrive_document_id))
 
         content = cut_utf_string(response.decode('UTF-8', errors='replace'), 9000, step=10)
-        doc.content = content
+        doc.gdrive_content = content
         doc.last_synced = get_utc_timestamp()
         algolia_engine.sync(doc, add=False)
     finally:
-        doc.download_status = Document.READY
+        doc.download_status = SyncedObject.READY
         doc.save()
 
 
-def get_google_tokens(user):
-    social = user.social_auth.get(provider='google-oauth2')
-    access_token = social.extra_data['access_token']
-    refresh_token = social.extra_data['refresh_token']
+def get_google_tokens(social_auth):
+    access_token = social_auth.extra_data['access_token']
+    refresh_token = social_auth.extra_data['refresh_token']
     return (access_token, refresh_token)
 
 
