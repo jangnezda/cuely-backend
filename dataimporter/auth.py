@@ -7,7 +7,7 @@ from social_core.exceptions import AuthMissingParameter, AuthException
 from django.conf import settings
 from dataimporter.models import UserAttributes, Team, Invite, FailedAuth, AlgoliaIndex
 from dataimporter.algolia.index import default_index
-from dataimporter.plan import FREE
+from dataimporter.plan import FREE, PLANS
 from frontend.views import index
 import logging
 logger = logging.getLogger(__name__)
@@ -208,9 +208,9 @@ def handle_team_integration(strategy, user, is_new, social, *args, **kwargs):
             team = Team()
             team.name = team_name
             team.index = ai
-            team.plan = FREE['name']
-            team.quota_users = FREE['users']
-            team.quota_objects = FREE['objects']
+            team.plan = FREE
+            team.quota_users = PLANS[FREE]['users']
+            team.quota_objects = PLANS[FREE]['objects']
             team.save()
         else:
             invite = Invite.objects.get(code=invite_code, consumed=False, expired=False)
