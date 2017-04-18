@@ -134,6 +134,14 @@ def update_synchronization():
             logger.info("Gdrive oauth token for user '%s' already in use, skipping sync ...", usa.user.username)
 
 
+def fetch_folders(user, auth_id):
+    """ Takes care of auth tokens and fetches user's GDrive folders. """
+    auth = UserSocialAuth.objects.get(id=auth_id)
+    access_token, refresh_token = get_google_tokens(auth)
+    service = connect_to_gdrive(access_token, refresh_token)
+    return get_gdrive_folders(service)
+
+
 @shared_task
 def collect_gdrive_docs(requester, is_team, access_token, refresh_token):
     logger.debug("LIST gdrive files")
@@ -330,7 +338,7 @@ def is_hidden(item_description):
 
 def is_hidden_in_folder(file_id, folders):
     if not (file_id and folders and file_id in folders):
-        return []
+        return False
     while file_id is not None:
         f = folders.get(file_id)
         if f.get('hidden') is True:

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block header %}
+  <div class="topbar">
+    <div class="title">Sync Google Drive</div>
+    <div class="paragraph">
+      Your account has been successfully created and you are now the admin of team <span>{{ team_name }}</span>.
+      <br/><br/>
+      Cuely will now sync with your Google Drive. By default, all folders in your Google Drive will be synced, but you can use the folder list below to exclude any folder from syncing.
+    </div>
+  </div>
+  {% if error %}
+  <div class="error">
+    {{ error }}
+  </div>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if request.user.is_authenticated %}
+<div> 
+  <a href="#collapseNew" onclick="folders();" class="btn btn-outline-primary login_button login_button_wide" role="button" data-toggle="collapse" aria-pressed="false" aria-expanded="false" aria-controls="collapseNew">Fetch folder list</a>
+  <div class="collapse" id="collapseNew">
+    <div class="login_form">
+      <div id="loader_container">
+        <div class="loader"></div>
+        <span class="loader_text">Please wait ...</span>
+      </div>
+			<div id="folders_tree"></div>
+    </div>
+  </div>
+  <hr id="separator">
+  <a id="startsync" href="#" onclick="callSync()" class="btn btn-outline-primary login_button login_button_wide" role="button">Start Google Drive sync</a>
+</div>
+
+<script type="text/javascript"><!--
+  let syncTimeout = null;
+  let have_tree = false;
+
+  function folders() {
+    let hr = document.getElementById('separator');
+    let syncButton = document.getElementById('startsync');
+    if (hr.style.display === 'none') {
+      hr.style.display = 'block';
+      syncButton.style.display = 'block';
+    } else if (!syncTimeout) {
+      hr.style.display = 'none';
+      syncButton.style.display = 'none';
+    }
+    if (!syncTimeout) {
+      syncTimeout = setTimeout(callFoldersSync, 1000);
+    }
+  }
+
+  function callSync() {
+    let form = new FormData();
+    form.append('social_id', {{ social_id }});
+    form.append('team_integration', '1');
+    if (have_tree) {
+      let ids = $('#folders_tree').jstree().get_selected().join(',');
+      if (ids.length > 0) {
+        form.append('excluded_folders', ids);
+      }
+    }
+    // send http post, but don't do anything with response -> server will send redirect after this call
+    fetch('/home/add_integration', { method: 'POST', body: form, credentials: 'include'}).catch(function(err) {
+      console.log(err);
+    }
+  }
+
+  function callFoldersSync() {
+    fetch('/home/fetch_gdrive_folders?social_id={{ social_id }}', {credentials: 'include'}).then(function(response) {
+      return response.json();
+    }).then(function(data) {
+      if (data.ready === false) {
+        console.log("Folders not ready yet ...");
+        syncTimeout = setTimeout(callFoldersSync, 5000);
+      } else {
+        // load data
+        initFoldersTree(data.folders);
+        have_tree = true;
+        // show the tree
+        let tree = document.getElementById('folders_tree');
+        let loader = document.getElementById('loader_container');
+        let hr = document.getElementById('separator');
+        let syncButton = document.getElementById('startsync');
+        tree.style.display = 'block';
+        hr.style.display = 'block';
+        syncButton.style.display = 'block';
+        loader.style.display = 'none';
+      }
+    }).catch(function(err) {
+      console.log(err);
+    })
+  }
+
+  function initFoldersTree(data) {
+    let formatted = data.map(function(x) {
+      return {
+        "id": x.id,
+        "parent": x.parent === null ? '#' : x.parent,
+        "text": x.name
+      }
+    });
+    console.log("Fetched", formatted.length, "folders");
+    $('#folders_tree').jstree({
+      'checkbox' : {
+        'keep_selected_style': false,
+        'three_state': false,
+        'cascade': 'down'
+      },
+      'plugins': ["checkbox"],
+      'core': {
+        'data': formatted,
+        'themes': {
+          'name': 'proton',
+          'icons': false,
+          'responsive': false
+        }
+      }
+    });
+	}
+//--></script>
+{% endif %}
+
+{% endblock %}
+
+{% block footer %}
+{% endblock %}

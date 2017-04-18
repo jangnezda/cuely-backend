@@ -187,7 +187,7 @@ def _failed_auth(error, strategy, email, team_name, invite_code):
     return index(strategy.request, error=error)
 
 
-def handle_team_integration(strategy, user, is_new, *args, **kwargs):
+def handle_team_integration(strategy, user, is_new, social, *args, **kwargs):
     """
     Use this function in social auth pipeline to create a new team or invited user.
     """
@@ -224,6 +224,13 @@ def handle_team_integration(strategy, user, is_new, *args, **kwargs):
         user_attr.team = team
         user_attr.team_admin = team_admin
         user_attr.save()
+
+    next_uri = '{}?social_id={}&in_auth_flow=y&signup={}'.format(
+        strategy.session_get('next'), social.id, 'y' if signup else 'n'
+    )
+    logger.debug("next=%s", next_uri)
+    strategy.session_set('next', next_uri)
+    return {'user': user}
 
 
 def _get_session_params(strategy):

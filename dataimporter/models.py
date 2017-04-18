@@ -20,7 +20,7 @@ class Team(models.Model):
     updated = models.DateTimeField(auto_now=True)
     name = models.CharField(max_length=100, blank=False, null=False, unique=True)
     index = models.ForeignKey(AlgoliaIndex, null=True, on_delete=models.SET_NULL)
-    plan = models.CharField(max_length=100, blank=False, null=False, default=FREE['name'])
+    plan = models.CharField(max_length=100, blank=False, null=False, default=FREE)
     quota_users = models.IntegerField(null=False)
     quota_objects = models.IntegerField(null=False)
 

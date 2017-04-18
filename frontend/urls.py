@@ -12,7 +12,9 @@ urlpatterns = [
     url(r'pipedrive_apikeys/?', views.pipedrive_apikeys),
     url(r'helpscout_apikeys/?', views.helpscout_apikeys),
     url(r'helpscout_docs_apikeys/?', views.helpscout_docs_apikeys),
+    url(r'fetch_gdrive_folders/?', views.fetch_gdrive_folders),
     url(r'jira_oauth/?', views.jira_oauth),
     url(r'login/?', views.login, name='login'),
+    url(r'admin_signup/?', views.admin_signup, name='admin_signup'),
     url(r'', views.index, name='index'),
 ]
