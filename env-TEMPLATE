@@ -1,12 +1,16 @@
 # Fill in the addresses and ids of dependent services
 
 CUELY_DEBUG=True
+# Google Drive API access
 GDRIVE_API_CLIENT_ID=
 GDRIVE_API_CLIENT_SECRET=
+# Github API access
 GITHUB_API_CLIENT_ID=
 GITHUB_API_CLIENT_SECRET=
+# Trello API access
 TRELLO_API_KEY=
 TRELLO_API_SECRET=
+# Algolia credentials
 ALGOLIA_APPLICATION_ID=
 ALGOLIA_API_KEY=
 ALGOLIA_API_SEARCH_KEY=
@@ -19,4 +23,5 @@ SEGMENT_KEY=
 OPBEAT_APPLICATION_ID=
 OPBEAT_TOKEN=
 C_FORCE_ROOT=1
+# Django secret key, used for hashing session cookies, etc. Should be a long random string.
 SECRET_KEY=
