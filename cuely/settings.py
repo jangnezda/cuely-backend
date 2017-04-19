@@ -281,7 +281,7 @@ EMAIL_PORT = os.environ.get('EMAIL_PORT')
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = 'jan@pipetop.com'
+DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_FROM_ADDRESS')
 
 LOGGING = {
     'version': 1,

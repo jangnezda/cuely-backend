@@ -11,7 +11,7 @@ accounts, backend is also used for user management, oauth sessions and api for C
 to work comfortably with the code and environemnt.
 
 The search index is not part of the backend. Instead, [Algolia](https://www.algolia.com) is used by Cuely service. It is pretty trivial to replace Algolia
-with something else here in the backend, however a lot more work needs to be done to replace this dependency in the frontend.
+with something else here in the backend, however more work needs to be done to replace this dependency in the frontend.
 
 ## Development
 Please make sure that you have docker and docker-compose installed (and working). For first-time setup do the following:
@@ -46,7 +46,7 @@ Backend and workers can be run on one instance for testing/staging/alpha/etc pur
 
 For more complicated deploys, like load-balancing of the backend, I advise the following:
 1. Deploy the backend to two instances.
-2. Then deploy nginx in front of them (preferably on separate machines).
+2. Then deploy nginx in front of them.
 3. Then use a load balancer to route the traffic to both nginx instances.
 4. Deploy the workers to separate instances, one for each integration type. So you have gdrive workers on one, trello workers on another, etc. It's then easier manage/update/scale based on what your users need the most.
 
